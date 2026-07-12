@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Attendance System — Admin Dashboard">
+    <title>AI Attendance — Admin Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- ====== SIDEBAR ====== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>🏫 SchoolSecure</h2>
+                <p>Admin Portal</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="active" onclick="showPage('dashboard')" id="nav-dashboard">
+                    📊 Dashboard
+                </a>
+                <a href="#" onclick="showPage('students')" id="nav-students">
+                    👥 Students
+                </a>
+                <a href="#" onclick="showPage('reports')" id="nav-reports">
+                    📝 Reports
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" style="width:100%;" id="admin-logout-btn">
+                    🚪 Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- ====== CONTENT ====== -->
+        <main class="admin-content fade-in">
+
+            <!-- ==================== DASHBOARD PAGE ==================== -->
+            <div id="page-dashboard">
+                <div class="page-header">
+                    <h1>📊 Daily Attendance Overview</h1>
+                    <p id="admin-date"></p>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card green">
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value" id="admin-total">—</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-label">Present</div>
+                        <div class="stat-value" id="admin-present">—</div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="stat-label">Absent</div>
+                        <div class="stat-value" id="admin-absent">—</div>
+                    </div>
+                </div>
+
+                <!-- Chart + Logs -->
+                <div class="admin-grid">
+                    <!-- Pie Chart -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2>📈 Attendance Ratio</h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pie-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Today's Logs -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2>🕐 Today's Logs</h2>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Class</th>
+                                        <th>Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-logs-body">
+                                    <tr>
+                                        <td colspan="4">
+                                            <div class="empty-state">
+                                                <div class="empty-icon">📋</div>
+                                                <p>Loading...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== STUDENTS PAGE ==================== -->
+            <div id="page-students" style="display: none;">
+                <div class="page-header">
+                    <h1>👥 Student Database</h1>
+                    <p>All registered students in the system</p>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📚 Registered Students</h2>
+                        <div class="section-actions">
+                            <select id="student-class-filter" onchange="loadStudents()">
+                                {% for cls in classes %}
+                                <option value="{{ cls }}">{{ cls }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Roll No</th>
+                                    <th>Class</th>
+                                    <th>Age</th>
+                                    <th>DOB</th>
+                                    <th>Gender</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="students-body">
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">👥</div>
+                                            <p>Loading students...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== REPORTS PAGE ==================== -->
+            <div id="page-reports" style="display: none;">
+                <div class="page-header">
+                    <h1>📝 Attendance Reports</h1>
+                    <p>Export and download attendance data</p>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📥 Export Today's Report</h2>
+                    </div>
+                    <div style="padding: 40px 24px; text-align: center;">
+                        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 15px;">
+                            Download today's attendance records as a CSV file.
+                        </p>
+                        <div class="section-actions" style="justify-content: center;">
+                            <select id="report-class-filter">
+                                {% for cls in classes %}
+                                <option value="{{ cls }}">{{ cls }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-export" id="report-export-btn" onclick="exportAdminCSV()">
+                                📥 Download CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====== JAVASCRIPT ====== -->
+    <script>
+        let pieChart = null;
+        let allStudents = [];
+
+        // --- Initialize on load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdminStats();
+            loadAdminLogs();
+            loadStudents();
+        });
+
+        // --- Page Navigation ---
+        function showPage(page) {
+            document.getElementById('page-dashboard').style.display = page === 'dashboard' ? 'block' : 'none';
+            document.getElementById('page-students').style.display = page === 'students' ? 'block' : 'none';
+            document.getElementById('page-reports').style.display = page === 'reports' ? 'block' : 'none';
+
+            // Update active nav
+            document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+            document.getElementById(`nav-${page}`).classList.add('active');
+        }
+
+        // --- Load Admin Stats + Pie Chart ---
+        async function loadAdminStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+
+                document.getElementById('admin-total').textContent = data.total;
+                document.getElementById('admin-present').textContent = data.present;
+                document.getElementById('admin-absent').textContent = data.absent;
+                document.getElementById('admin-date').textContent = `Report for ${data.date}`;
+
+                // Build or update pie chart
+                buildPieChart(data.present, data.absent);
+            } catch (err) {
+                console.error('Admin stats error:', err);
+            }
+        }
+
+        function buildPieChart(present, absent) {
+            const ctx = document.getElementById('pie-chart').getContext('2d');
+
+            if (pieChart) pieChart.destroy();
+
+            if (present === 0 && absent === 0) {
+                pieChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['No Data'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#374151'],
+                            borderWidth: 0,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { display: false },
+                        }
+                    }
+                });
+                return;
+            }
+
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent'],
+                    datasets: [{
+                        data: [present, absent],
+                        backgroundColor: ['#4CAF50', '#ef4444'],
+                        borderColor: ['#2E7D32', '#dc2626'],
+                        borderWidth: 2,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 13, weight: 600 },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyleWidth: 12,
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a2233',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#94a3b8',
+                            borderColor: '#2d3c52',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                    }
+                }
+            });
+        }
+
+        // --- Load Today's Logs ---
+        async function loadAdminLogs() {
+            try {
+                const res = await fetch('/api/attendance?class=All Classes');
+                const data = await res.json();
+                const tbody = document.getElementById('admin-logs-body');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr><td colspan="4">
+                            <div class="empty-state">
+                                <div class="empty-icon">📭</div>
+                                <p>No records for today</p>
+                            </div>
+                        </td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.map(r => `
+                    <tr>
+                        <td>${escapeHtml(r.name)}</td>
+                        <td>${escapeHtml(r.class)}</td>
+                        <td>${escapeHtml(r.time)}</td>
+                        <td><span class="badge badge-green">✅ Present</span></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Logs error:', err);
+            }
+        }
+
+        // --- Load Students ---
+        async function loadStudents() {
+            try {
+                const res = await fetch('/api/students');
+                const data = await res.json();
+                allStudents = data;
+                renderStudents();
+            } catch (err) {
+                console.error('Students error:', err);
+            }
+        }
+
+        function renderStudents() {
+            const filter = document.getElementById('student-class-filter').value;
+            const tbody = document.getElementById('students-body');
+            
+            let filtered = allStudents;
+            if (filter !== 'All Classes') {
+                filtered = allStudents.filter(s => s.class === filter);
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <div class="empty-icon">👥</div>
+                                <p>No students found for this class.</p>
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => `
+                <tr>
+                    <td><span style="font-weight:600; color:var(--accent-blue)">${escapeHtml(s.student_id)}</span></td>
+                    <td style="font-weight:600; color:var(--text-primary)">${escapeHtml(s.name)}</td>
+                    <td><span class="badge" style="background:var(--bg-input)">${escapeHtml(s.roll_no)}</span></td>
+                    <td>${escapeHtml(s.class)}</td>
+                    <td>${escapeHtml(s.age || '—')}</td>
+                    <td>${escapeHtml(s.dob || '—')}</td>
+                    <td>
+                        <span class="badge ${s.gender === 'FEMALE' ? 'badge-red' : 'badge-blue'}">
+                            ${s.gender === 'FEMALE' ? '♀' : '♂'} ${escapeHtml(s.gender) || '—'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${escapeHtml(s.roll_no)}', '${escapeHtml(s.name)}')">
+                            🗑️ Delete
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteStudent(rollNo, name) {
+            if (!confirm(`Are you sure you want to permanently delete student ${name} (Roll No: ${rollNo})?\n\nThis will remove their profile and all saved face photos.`)) {
+                return;
+            }
+            try {
+                const res = await fetch(`/api/student/${encodeURIComponent(rollNo)}/delete`, { method: 'POST' });
+                const result = await res.json();
+                if (result.status === 'ok') {
+                    alert(result.message);
+                    loadStudents(); // reload table
+                    loadAdminStats(); // refresh stats
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to delete student.');
+            }
+        }
+
+        // --- CSV Export ---
+        function exportAdminCSV() {
+            const cls = document.getElementById('report-class-filter').value;
+            window.location.href = `/export/csv?class=${encodeURIComponent(cls)}`;
+        }
+
+        // --- Utility ---
+        function escapeHtml(text) {
+            if (text == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

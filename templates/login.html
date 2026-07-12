@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-Powered Face Attendance System — Teacher Login Portal">
+    <title>AI Attendance — Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Logo -->
+            <div class="logo">
+                <span class="logo-icon">🧠</span>
+                <h1>AI Attendance System</h1>
+                <p>Select your class and enter PIN to start</p>
+            </div>
+
+            <!-- Error Alert -->
+            {% if error %}
+            <div class="alert alert-error">
+                <span>⚠️</span> {{ error }}
+            </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form action="{{ url_for('do_login') }}" method="POST">
+                <div class="form-group">
+                    <label for="class_name">Class</label>
+                    <select name="class_name" id="class_name" required>
+                        <option value="" disabled selected>Select your class</option>
+                        {% for cls in classes %}
+                        <option value="{{ cls }}">{{ cls }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pin">Teacher PIN</label>
+                    <input type="password" name="pin" id="pin" placeholder="Enter 4-digit PIN"
+                           maxlength="10" required autocomplete="off">
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="login-btn">
+                    🚀 Start Session
+                </button>
+            </form>
+
+            <!-- Admin Link -->
+            <div style="text-align: center; margin-top: 24px;">
+                <a href="{{ url_for('admin_login_page') }}"
+                   style="color: var(--text-muted); font-size: 13px; text-decoration: none;">
+                    🔒 Admin Portal
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

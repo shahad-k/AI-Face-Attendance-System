@@ -11,18 +11,18 @@
 
 ## 🚀 Project Overview
 
-Designed to replace manual, error-prone attendance taking, this system provides **real-time face verification** and a suite of engagement features — all running locally on your machine with zero cloud dependency.
+Designed to replace manual, error-prone attendance taking, this system provides **real-time face verification** and a suite of engagement features. **Recently upgraded to a full Flask Web Application**, the system can now be accessed via any web browser on your local network or over the public internet!
 
 ### ✨ Key Features
 
 | Feature | Description |
 |---|---|
 | 🎯 **Facial Recognition Attendance** | Uses `face_recognition` and OpenCV to identify students and mark attendance with sub-second latency. |
-| 📊 **Admin Dashboard** | A secure, GUI-based interface built with CustomTkinter for viewing records, filtering by class, and exporting logs to CSV. |
+| 🌐 **Modern Web Interface** | Clean, responsive web dashboard built with HTML, CSS, and JS (replacing the old Tkinter GUI). |
+| 📊 **Admin Dashboard** | Secure portal for viewing records, filtering by class, managing student databases, and exporting logs. |
 | 😊 **Smile Detection Engine** | Haar Cascade-based smile detection ensures students are present and engaged during check-in. |
-| 🎂 **Birthday Celebration Module** | Detects a student's date of birth and launches an animated, interactive UI celebration with GIF cake effects. |
-| 🔒 **Secure Multi-Room Gatekeeping** | Configurable PIN-based sessions restrict access to specific classrooms, ensuring data integrity. |
-| ⚡ **Self-Healing Bootstrap** | `boot.py` automatically verifies dependencies, initializes the database, and launches the system. |
+| 🎂 **Birthday Celebration Module** | Detects a student's date of birth and launches an animated birthday banner and celebration popup. |
+| 🔒 **Secure Role-based Access** | PIN-based sessions for teachers (`/camera`) and secure password protection for Admins (`/admin`). |
 
 ---
 
@@ -30,65 +30,67 @@ Designed to replace manual, error-prone attendance taking, this system provides 
 
 | Component | Technology |
 |---|---|
-| **Language** | Python 3.x |
+| **Backend** | Python, Flask |
+| **Frontend** | HTML5, CSS3, Vanilla JavaScript |
 | **Computer Vision** | OpenCV (Haar Cascades, VideoCapture) |
 | **AI / ML** | `face_recognition`, `dlib` |
-| **GUI Framework** | CustomTkinter (Dark Mode), Tkinter |
 | **Database** | SQLite3 (Persistent storage with transactional integrity) |
-| **Data Analysis** | pandas, matplotlib |
 
 ---
 
-## 🚀 Quick Start — The "Antigravity" Installation
+## 🚀 Quick Start — Local Server
 
-To eliminate **"dependency hell"**, this project includes a self-healing bootstrap system.
-
-### 1. Clone the Repository
-
+### 1. Install Dependencies
 ```bash
-git clone https://github.com/yourusername/attendance-ai.git
-cd attendance-ai
+pip install flask opencv-python numpy face_recognition
 ```
 
-### 2. Launch the System
-
+### 2. Launch the Web App
 ```bash
-python boot.py
+python app.py
 ```
+*The system will automatically initialize the database on first run.*
 
-**That's it!** `boot.py` will:
+### 3. Open in Browser
+Go to [http://127.0.0.1:5000](http://127.0.0.1:5000) in your web browser!
 
-1. ✅ Verify installation of `opencv-python`, `customtkinter`, `face-recognition`, `pillow`, `pandas`, and `matplotlib`
-2. 📦 Automatically `pip install` any missing packages
-3. 🗃️ Initialize the SQLite database with the correct schema
-4. 📂 Create required directories (`dataset/`, `encodings/`)
-5. 🚀 Launch the `login.py` interface
+---
+
+## 🌍 How to Make the App Public (Using Ngrok)
+
+If you want to access the attendance camera from a tablet in the classroom or share it securely over the internet, you must use **HTTPS** (browsers block webcams on standard HTTP). Ngrok is the easiest way to do this for free!
+
+1. Go to [ngrok.com](https://ngrok.com/) and create a free account.
+2. Download the Ngrok app for Windows/Mac and authenticate it.
+3. Keep your Flask app running (`python app.py`).
+4. Open a **new** terminal window and run:
+   ```bash
+   ngrok http 5000
+   ```
+5. Ngrok will give you a secure, public HTTPS link (e.g., `https://a1b2c3d4.ngrok-free.app`). 
+6. Open that link on any device in the world to access your AI Server!
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 attendance-ai/
 │
-├── boot.py              # 🚀 Self-healing bootstrapper (start here!)
-├── login.py             # 🔐 Secure portal — class selection + PIN auth
-├── main.py              # 🎯 Core engine — camera feed + face recognition
-├── register.py          # 📝 Student enrollment with guided photo capture
-├── attendance.py        # 📊 Data viewer — filter & export attendance logs
-├── admin.py             # 🏫 Admin dashboard — pie charts, tables, reports
-├── birthday_ui.py       # 🎂 Animated birthday celebration popup
-├── encode.py            # 🧬 Facial encoding generator (dataset → pickle)
-├── setup_db.py          # 🗃️ Database schema initializer
+├── app.py               # 🚀 Main Flask Backend Engine (start here!)
+├── templates/           # 🌐 HTML Pages
+│   ├── login.html       # Teacher PIN portal
+│   ├── dashboard.html   # Live stats & class selection
+│   ├── camera.html      # AI Face Recognition interface
+│   ├── register.html    # Guided new student registration
+│   └── admin.html       # Full admin control panel
 │
-├── utils/
-│   ├── config.py        # ⚙️ Centralized configuration (PINs, paths, colors)
-│   └── helpers.py       # 🔧 Birthday checking & age auto-update logic
+├── static/              
+│   └── style.css        # 🎨 Unified CSS Styling
 │
-├── assets/              # 🎨 Birthday cake GIF animations (8 variants)
 ├── database/            # 💾 SQLite database (auto-created)
 ├── dataset/             # 📸 Student face images (auto-created)
-└── encodings/           # 🧬 Serialized face encoding files
+└── encodings.pickle     # 🧬 Serialized face encoding vectors
 ```
 
 ---

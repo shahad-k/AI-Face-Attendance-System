@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Attendance — Register Student</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .register-layout { max-width: 1000px; margin: 0 auto; padding: 32px; }
+        .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .step-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); padding: 28px; transition: var(--transition);
+        }
+        .step-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--accent-green); color: white; font-size: 14px; font-weight: 700;
+        }
+        .step-number.done { background: var(--accent-green); }
+        .step-number.active { background: var(--accent-blue); animation: pulse 1.5s infinite; }
+        .step-number.pending { background: var(--text-muted); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+        .photo-slot {
+            aspect-ratio: 1; background: var(--bg-input); border: 2px dashed var(--border-color);
+            border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+            overflow: hidden; font-size: 12px; color: var(--text-muted); position: relative;
+        }
+        .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-slot.captured { border-color: var(--accent-green); border-style: solid; }
+        .photo-slot.active { border-color: var(--accent-blue); animation: pulse 1s infinite; }
+        .camera-preview {
+            width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius-md);
+            overflow: hidden; margin-bottom: 16px; display: flex; align-items: center; justify-content: center;
+        }
+        .camera-preview video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .direction-label {
+            text-align: center; font-size: 18px; font-weight: 700; padding: 12px;
+            background: var(--accent-green-glow); border-radius: var(--radius-sm);
+            color: var(--accent-green); margin-bottom: 12px;
+        }
+        .progress-bar {
+            width: 100%; height: 6px; background: var(--bg-input); border-radius: 3px;
+            margin-top: 16px; overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%; background: linear-gradient(90deg, var(--accent-green), #66bb6a);
+            border-radius: 3px; transition: width 0.5s ease;
+        }
+        .result-banner {
+            padding: 20px; border-radius: var(--radius-md); text-align: center;
+            font-weight: 600; font-size: 16px; margin-top: 16px;
+        }
+        .result-banner.success { background: rgba(76,175,80,0.1); color: var(--accent-green); border: 1px solid rgba(76,175,80,0.2); }
+        .result-banner.error { background: rgba(239,68,68,0.1); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.2); }
+        @media (max-width: 768px) {
+            .register-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .photo-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- TOP NAV -->
+        <nav class="topnav">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <span class="brand-icon">🧠</span>
+                <div><h1>AI Attendance</h1><span>Registration</span></div>
+            </a>
+            <div class="topnav-actions">
+                <a href="{{ url_for('camera_page') }}" class="btn btn-primary btn-sm">📸 Camera</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">📋 Dashboard</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">Logout</a>
+            </div>
+        </nav>
+
+        <div class="register-layout fade-in">
+            <div style="margin-bottom: 28px;">
+                <h1 style="font-size: 26px; font-weight: 800;">🔒 Secure Registration Portal</h1>
+                <p style="color: var(--text-muted); margin-top: 4px;">Register a new student with face capture</p>
+            </div>
+
+            <!-- Step 1: Admin Password -->
+            <div class="step-card" id="step-auth" style="margin-bottom: 20px;">
+                <h2><span class="step-number active" id="sn-1">1</span> Authentication</h2>
+                <div class="form-group">
+                    <label for="admin-pass">Admin / Principal Password</label>
+                    <input type="password" id="admin-pass" placeholder="Enter password to unlock registration">
+                </div>
+                <button class="btn btn-primary" onclick="verifyPassword()" id="auth-btn">🔓 Unlock</button>
+                <div id="auth-error" class="alert alert-error" style="display:none; margin-top:12px;"></div>
+            </div>
+
+            <!-- Step 2 & 3: Details + Camera (hidden until auth) -->
+            <div id="registration-area" style="display: none;">
+                <div class="register-grid">
+                    <!-- LEFT: Student Details -->
+                    <div class="step-card">
+                        <h2><span class="step-number" id="sn-2">2</span> Student Details</h2>
+                        <div class="form-group">
+                            <label>Student ID</label>
+                            <input type="text" id="f-student-id" placeholder="e.g. STU001">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="f-name" placeholder="John Doe">
+                            </div>
+                            <div class="form-group">
+                                <label>Roll No</label>
+                                <input type="text" id="f-roll" placeholder="e.g. 101">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Class</label>
+                                <select id="f-class">
+                                    {% for cls in classes %}
+                                    <option value="{{ cls }}">{{ cls }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender</label>
+                                <select id="f-gender">
+                                    <option value="MALE">Male</option>
+                                    <option value="FEMALE">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Age</label>
+                                <input type="number" id="f-age" placeholder="16">
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Birth (DD-MM-YYYY)</label>
+                                <input type="text" id="f-dob" placeholder="15-06-2009">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveDetails()" id="save-btn">💾 Save to Database</button>
+                        <div id="save-result" class="result-banner" style="display:none;"></div>
+                    </div>
+
+                    <!-- RIGHT: Photo Capture -->
+                    <div class="step-card">
+                        <h2><span class="step-number" id="sn-3">3</span> Face Capture</h2>
+                        <div class="camera-preview" id="reg-camera-box">
+                            <video id="reg-video" autoplay playsinline></video>
+                        </div>
+                        <div class="direction-label" id="direction-label">Step 2 first: Save student details</div>
+                        <button class="btn btn-primary" onclick="startCapture()" id="capture-btn" disabled>
+                            📸 Start Smart Capture
+                        </button>
+                        <div class="photo-grid" id="photo-grid">
+                            <div class="photo-slot" id="slot-1">1</div>
+                            <div class="photo-slot" id="slot-2">2</div>
+                            <div class="photo-slot" id="slot-3">3</div>
+                            <div class="photo-slot" id="slot-4">4</div>
+                            <div class="photo-slot" id="slot-5">5</div>
+                        </div>
+                        <div class="progress-bar"><div class="fill" id="capture-progress" style="width:0%"></div></div>
+
+                        <!-- Encode button (after all photos) -->
+                        <button class="btn btn-export" onclick="encodeFaces()" id="encode-btn"
+                                style="display:none; margin-top:16px; width:100%;">
+                            🧬 Generate Face Encodings
+                        </button>
+                        <div id="encode-result" class="result-banner" style="display:none;"></div>
+                        
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary" id="finish-btn" 
+                           style="display:none; margin-top:16px; width:100%; text-align:center;">
+                           ✅ Finish & Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="reg-canvas" style="display:none;"></canvas>
+
+    <script>
+        const regVideo = document.getElementById('reg-video');
+        const regCanvas = document.getElementById('reg-canvas');
+        const regCtx = regCanvas.getContext('2d');
+        let regStreamReady = false;
+        let savedRollNo = '';
+        const directions = ['Straight', 'Slightly Left', 'Slightly Right', 'Slightly Up', 'Slightly Down'];
+        let photosTaken = 0;
+
+        // Start registration camera
+        async function startRegCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+                regVideo.srcObject = stream;
+                regStreamReady = true;
+            } catch (err) {
+                document.getElementById('direction-label').textContent = 'Camera not available';
+            }
+        }
+
+        function verifyPassword() {
+            const pass = document.getElementById('admin-pass').value;
+            // We'll verify server-side during registration, but do a quick check here
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass, student_id: '__check__', name: 'check', roll_no: 'check', class: 'check' })
+            }).then(r => r.json()).then(data => {
+                // If password is wrong, the API returns error
+                if (pass === '') {
+                    showAuthError('Please enter a password.');
+                    return;
+                }
+                // Store password for later use
+                window._adminPass = pass;
+                document.getElementById('step-auth').style.display = 'none';
+                document.getElementById('registration-area').style.display = 'block';
+                document.getElementById('sn-2').classList.add('active');
+                startRegCamera();
+            });
+        }
+
+        function showAuthError(msg) {
+            const el = document.getElementById('auth-error');
+            el.innerHTML = '<span>⚠️</span> ' + msg;
+            el.style.display = 'flex';
+        }
+
+        async function saveDetails() {
+            const data = {
+                password: window._adminPass || '',
+                student_id: document.getElementById('f-student-id').value,
+                name: document.getElementById('f-name').value,
+                roll_no: document.getElementById('f-roll').value,
+                class: document.getElementById('f-class').value,
+                gender: document.getElementById('f-gender').value,
+                age: document.getElementById('f-age').value,
+                dob: document.getElementById('f-dob').value,
+            };
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            const el = document.getElementById('save-result');
+
+            if (result.status === 'error') {
+                el.className = 'result-banner error';
+                el.textContent = '❌ ' + result.message;
+            } else {
+                el.className = 'result-banner success';
+                el.textContent = '✅ ' + result.message;
+                savedRollNo = data.roll_no;
+                document.getElementById('capture-btn').disabled = false;
+                document.getElementById('direction-label').textContent = 'Ready! Click Start Smart Capture';
+                document.getElementById('sn-2').classList.remove('active');
+                document.getElementById('sn-2').classList.add('done');
+                document.getElementById('sn-3').classList.add('active');
+            }
+            el.style.display = 'block';
+        }
+
+        async function startCapture() {
+            if (!regStreamReady || !savedRollNo) return;
+            document.getElementById('capture-btn').disabled = true;
+            photosTaken = 0;
+            captureNext();
+        }
+
+        async function captureNext() {
+            if (photosTaken >= 5) {
+                document.getElementById('direction-label').textContent = '🎉 All 5 photos captured!';
+                document.getElementById('encode-btn').style.display = 'block';
+                document.getElementById('sn-3').classList.remove('active');
+                document.getElementById('sn-3').classList.add('done');
+                return;
+            }
+
+            const dir = directions[photosTaken];
+            document.getElementById('direction-label').textContent = 'Look: ' + dir;
+            document.getElementById('slot-' + (photosTaken + 1)).classList.add('active');
+            document.getElementById('capture-progress').style.width = (photosTaken / 5 * 100) + '%';
+
+            // 3-second countdown
+            let count = 3;
+            const countdownInterval = setInterval(() => {
+                document.getElementById('direction-label').textContent = `Look: ${dir} — Capturing in ${count}...`;
+                count--;
+                if (count < 0) {
+                    clearInterval(countdownInterval);
+                    takePhoto();
+                }
+            }, 1000);
+        }
+
+        async function takePhoto() {
+            regCanvas.width = regVideo.videoWidth;
+            regCanvas.height = regVideo.videoHeight;
+            regCtx.drawImage(regVideo, 0, 0);
+            const frameData = regCanvas.toDataURL('image/jpeg', 0.8);
+
+            // Show thumbnail
+            const slot = document.getElementById('slot-' + (photosTaken + 1));
+            slot.classList.remove('active');
+            slot.classList.add('captured');
+            slot.innerHTML = '<img src="' + frameData + '">';
+
+            // Save to server
+            try {
+                await fetch('/api/save-photo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roll_no: savedRollNo, index: photosTaken + 1, frame: frameData })
+                });
+            } catch (err) {
+                console.error('Photo save error:', err);
+            }
+
+            photosTaken++;
+            document.getElementById('capture-progress').style.width = (photosTaken / 5 * 100) + '%';
+
+            // Small delay then next
+            setTimeout(captureNext, 500);
+        }
+
+        async function encodeFaces() {
+            const btn = document.getElementById('encode-btn');
+            btn.innerHTML = '<span class="spinner"></span> Encoding faces...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/encode-faces', { method: 'POST' });
+                const result = await res.json();
+                const el = document.getElementById('encode-result');
+
+                if (result.status === 'ok') {
+                    el.className = 'result-banner success';
+                    el.textContent = '✅ ' + result.message;
+                    document.getElementById('finish-btn').style.display = 'block';
+                    btn.style.display = 'none';
+                } else {
+                    el.className = 'result-banner error';
+                    el.textContent = '❌ ' + result.message;
+                }
+                el.style.display = 'block';
+            } catch (err) {
+                console.error('Encoding error:', err);
+            } finally {
+                btn.innerHTML = '🧬 Generate Face Encodings';
+                btn.disabled = false;
+            }
+        }
+
+        // --- Auto format DOB and calculate Age ---
+        const dobInput = document.getElementById('f-dob');
+        const ageInput = document.getElementById('f-age');
+
+        dobInput.addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, ''); // strip non-digits
+            if (v.length > 8) v = v.substring(0, 8); // max 8 digits
+            
+            // Auto add hyphens: DD-MM-YYYY
+            let formatted = v;
+            if (v.length > 4) {
+                formatted = v.substring(0, 2) + '-' + v.substring(2, 4) + '-' + v.substring(4);
+            } else if (v.length > 2) {
+                formatted = v.substring(0, 2) + '-' + v.substring(2);
+            }
+            e.target.value = formatted;
+
+            // Auto calculate age if fully entered
+            if (v.length === 8) {
+                const day = parseInt(v.substring(0, 2));
+                const month = parseInt(v.substring(2, 4));
+                const year = parseInt(v.substring(4, 8));
+                
+                if (month > 0 && month <= 12 && day > 0 && day <= 31) {
+                    const today = new Date();
+                    let age = today.getFullYear() - year;
+                    const m = today.getMonth() + 1 - month;
+                    if (m < 0 || (m === 0 && today.getDate() < day)) {
+                        age--;
+                    }
+                    if (age >= 0 && age < 150) {
+                        ageInput.value = age;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

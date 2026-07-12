@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Attendance System — Today's Attendance Dashboard">
+    <title>AI Attendance — Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- ====== TOP NAVIGATION ====== -->
+        <nav class="topnav">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <span class="brand-icon">🧠</span>
+                <div>
+                    <h1>AI Attendance</h1>
+                    <span>Dashboard</span>
+                </div>
+            </a>
+            <div class="topnav-actions">
+                <div class="session-badge">
+                    <span>{{ current_class }}</span>
+                </div>
+                <a href="{{ url_for('camera_page') }}" class="btn btn-primary btn-sm" id="camera-btn">📸 Camera</a>
+                <a href="{{ url_for('register_page') }}" class="btn btn-secondary btn-sm" id="register-btn">🔒 Register</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" id="logout-btn">Logout</a>
+            </div>
+        </nav>
+
+        <!-- ====== MAIN CONTENT ====== -->
+        <main class="main-content fade-in">
+
+            <!-- Birthday Banner (hidden by default, shown via JS) -->
+            <div id="birthday-banner" class="alert alert-birthday" style="display: none; margin-bottom: 24px;"></div>
+
+            <!-- Quick Action Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px;">
+                <a href="{{ url_for('camera_page') }}" id="action-camera" style="text-decoration:none;"
+                   class="section-card" onmouseenter="this.style.borderColor='#4CAF50'" onmouseleave="this.style.borderColor=''">
+                    <div style="padding: 28px; display:flex; align-items:center; gap:20px;">
+                        <div style="font-size:42px;">📸</div>
+                        <div>
+                            <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Start AI Camera</h3>
+                            <p style="font-size:13px; color:var(--text-muted);">Live face recognition &amp; auto attendance</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="{{ url_for('register_page') }}" id="action-register" style="text-decoration:none;"
+                   class="section-card" onmouseenter="this.style.borderColor='#3b82f6'" onmouseleave="this.style.borderColor=''">
+                    <div style="padding: 28px; display:flex; align-items:center; gap:20px;">
+                        <div style="font-size:42px;">🔒</div>
+                        <div>
+                            <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">New Registration</h3>
+                            <p style="font-size:13px; color:var(--text-muted);">Enroll students with face capture</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card green">
+                    <div class="stat-label">Total Students</div>
+                    <div class="stat-value" id="stat-total">—</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-label">Present Today</div>
+                    <div class="stat-value" id="stat-present">—</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-label">Absent Today</div>
+                    <div class="stat-value" id="stat-absent">—</div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-label">Date</div>
+                    <div class="stat-value" id="stat-date" style="font-size: 22px;">—</div>
+                </div>
+            </div>
+
+            <!-- Attendance Table Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>📋 Today's Attendance</h2>
+                    <div class="section-actions">
+                        <select id="class-filter" aria-label="Filter by class">
+                            {% for cls in classes %}
+                            <option value="{{ cls }}" {% if cls == current_class %}selected{% endif %}>{{ cls }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary btn-sm" id="load-btn" onclick="loadAttendance()">
+                            🔄 Load
+                        </button>
+                        <button class="btn btn-export btn-sm" id="export-btn" onclick="exportCSV()">
+                            📥 Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="data-table" id="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Full Name</th>
+                                <th>Roll No</th>
+                                <th>Class</th>
+                                <th>Check-In Time</th>
+                                <th>Smiled?</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📋</div>
+                                        <p>Select a class and click Load to view attendance</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====== JAVASCRIPT ====== -->
+    <script>
+        // --- Load stats on page load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadAttendance();
+            loadBirthdays();
+        });
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.total;
+                document.getElementById('stat-present').textContent = data.present;
+                document.getElementById('stat-absent').textContent = data.absent;
+                document.getElementById('stat-date').textContent = data.date;
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            }
+        }
+
+        async function loadAttendance() {
+            const selectedClass = document.getElementById('class-filter').value;
+            const tbody = document.getElementById('table-body');
+            const loadBtn = document.getElementById('load-btn');
+
+            // Show loading state
+            loadBtn.innerHTML = '<span class="spinner"></span> Loading';
+            loadBtn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/attendance?class=${encodeURIComponent(selectedClass)}`);
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📭</div>
+                                    <p>No attendance records found for today</p>
+                                </div>
+                            </td>
+                        </tr>`;
+                } else {
+                    tbody.innerHTML = data.map(record => `
+                        <tr>
+                            <td>${escapeHtml(record.student_id)}</td>
+                            <td>${escapeHtml(record.name)}</td>
+                            <td><span class="badge badge-blue">${escapeHtml(record.roll_no)}</span></td>
+                            <td>${escapeHtml(record.class)}</td>
+                            <td>${escapeHtml(record.time)}</td>
+                            <td>
+                                <span class="badge ${record.smiled === 'Yes' ? 'badge-green' : 'badge-red'}">
+                                    ${record.smiled === 'Yes' ? '😊 Yes' : '😐 No'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Also refresh stats
+                loadStats();
+            } catch (err) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-icon">⚠️</div>
+                                <p>Error loading data. Please try again.</p>
+                            </div>
+                        </td>
+                    </tr>`;
+                console.error('Failed to load attendance:', err);
+            } finally {
+                loadBtn.innerHTML = '🔄 Load';
+                loadBtn.disabled = false;
+            }
+        }
+
+        function exportCSV() {
+            const selectedClass = document.getElementById('class-filter').value;
+            window.location.href = `/export/csv?class=${encodeURIComponent(selectedClass)}`;
+        }
+
+        async function loadBirthdays() {
+            try {
+                const res = await fetch('/api/birthdays');
+                const names = await res.json();
+                if (names.length > 0) {
+                    const banner = document.getElementById('birthday-banner');
+                    banner.textContent = `🎉 Hey everyone! Wish a very Happy Birthday to ${names.join(', ')}! 🎂`;
+                    banner.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Birthday check failed:', err);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (text == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import sys
 
+# --- IMPORT CONFIG ---
+from utils import config
+
+# --- Resolve all paths relative to this script's location ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- UI SETTINGS ---
 ctk.set_appearance_mode("Light")  
 ctk.set_default_color_theme("green")

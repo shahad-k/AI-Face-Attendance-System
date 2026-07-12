@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Attendance — Live Camera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .camera-layout { display: flex; gap: 24px; min-height: calc(100vh - 80px); padding: 24px 32px; }
+        .camera-panel { flex: 1; display: flex; flex-direction: column; }
+        .dashboard-panel { width: 380px; display: flex; flex-direction: column; gap: 16px; }
+        .video-container {
+            position: relative; flex: 1; background: #000; border-radius: var(--radius-lg);
+            overflow: hidden; border: 2px solid var(--border-color); min-height: 400px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .video-container video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .video-overlay {
+            position: absolute; bottom: 16px; left: 16px; right: 16px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 10;
+        }
+        .scan-indicator {
+            display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+            background: rgba(0,0,0,0.7); border-radius: 100px; font-size: 13px; font-weight: 600;
+        }
+        .scan-dot { width: 10px; height: 10px; border-radius: 50%; animation: pulse 1.5s ease infinite; }
+        .scan-dot.scanning { background: var(--accent-green); }
+        .scan-dot.idle { background: var(--text-muted); animation: none; }
+        .result-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); padding: 24px; transition: var(--transition);
+        }
+        .result-card.success { border-color: var(--accent-green); box-shadow: 0 0 20px rgba(76,175,80,0.1); }
+        .result-card.warning { border-color: var(--accent-amber); box-shadow: 0 0 20px rgba(245,158,11,0.1); }
+        .result-card.error { border-color: var(--accent-red); box-shadow: 0 0 20px rgba(239,68,68,0.1); }
+        .result-card .result-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+        .result-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+        .result-detail { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+        .result-detail:last-child { border-bottom: none; }
+        .result-detail .label { color: var(--text-muted); }
+        .result-detail .value { font-weight: 600; }
+        .result-message { text-align: center; padding: 16px; font-size: 15px; font-weight: 600; border-radius: var(--radius-sm); margin-top: 12px; }
+        .msg-green { background: rgba(76,175,80,0.1); color: var(--accent-green); }
+        .msg-red { background: rgba(239,68,68,0.1); color: var(--accent-red); }
+        .msg-amber { background: rgba(245,158,11,0.1); color: var(--accent-amber); }
+        .msg-pink { background: rgba(236,72,153,0.1); color: var(--accent-pink); }
+
+        /* Birthday overlay */
+        .birthday-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .birthday-card {
+            background: linear-gradient(135deg, #FDF0ED, #FFF5E6); border-radius: var(--radius-xl);
+            padding: 48px; text-align: center; max-width: 500px; animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1);
+        }
+        .birthday-card h2 { font-size: 32px; color: #2C3E50; margin-bottom: 8px; }
+        .birthday-card p { font-size: 18px; color: #7F8C8D; margin-bottom: 20px; }
+        .birthday-card .cake { font-size: 80px; margin-bottom: 16px; }
+        .birthday-card .countdown { font-size: 24px; font-weight: 700; color: #E74C3C; }
+
+        @media (max-width: 900px) {
+            .camera-layout { flex-direction: column; padding: 16px; }
+            .dashboard-panel { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- TOP NAV -->
+        <nav class="topnav">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <span class="brand-icon">🧠</span>
+                <div><h1>AI Attendance</h1><span>Live Camera</span></div>
+            </a>
+            <div class="topnav-actions">
+                <div class="session-badge"><span>{{ current_class }}</span></div>
+                <a href="{{ url_for('admin_login_page') }}" class="btn btn-secondary btn-sm">⚙️ Admin</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm">📋 Dashboard</a>
+                <a href="{{ url_for('register_page') }}" class="btn btn-primary btn-sm">🔒 Register</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">Logout</a>
+            </div>
+        </nav>
+
+        <!-- Birthday Banner -->
+        <div id="birthday-banner" class="alert alert-birthday" style="display: none; margin: 24px 32px 0 32px;"></div>
+
+        <!-- CAMERA LAYOUT -->
+        <div class="camera-layout fade-in">
+            <!-- LEFT: Camera Feed -->
+            <div class="camera-panel">
+                <div class="video-container" id="video-container">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="video-overlay">
+                        <div class="scan-indicator">
+                            <div class="scan-dot" id="scan-dot"></div>
+                            <span id="scan-status">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Recognition Dashboard -->
+            <div class="dashboard-panel">
+                <!-- Status Card -->
+                <div class="result-card" id="result-card">
+                    <div class="result-icon" id="result-icon">👤</div>
+                    <h3 id="result-title">Waiting for student...</h3>
+                    <div id="result-details" style="display:none;">
+                        <div class="result-detail"><span class="label">Name</span><span class="value" id="r-name">—</span></div>
+                        <div class="result-detail"><span class="label">Roll No</span><span class="value" id="r-roll">—</span></div>
+                        <div class="result-detail"><span class="label">Class</span><span class="value" id="r-class">—</span></div>
+                        <div class="result-detail"><span class="label">Smiled</span><span class="value" id="r-smiled">—</span></div>
+                        <div class="result-detail"><span class="label">Time</span><span class="value" id="r-time">—</span></div>
+                    </div>
+                    <div class="result-message msg-green" id="result-message" style="display:none;"></div>
+                </div>
+
+                <!-- Smile Prompt -->
+                <div class="result-card" style="text-align:center;">
+                    <p style="color:var(--text-secondary); font-size:15px; font-style:italic;">
+                        😊 You look good when you smile!
+                    </p>
+                </div>
+
+                <!-- Quick Actions -->
+                <a href="{{ url_for('register_page') }}" class="btn btn-primary" style="text-align:center;">
+                    🔒 New Registration
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary" style="text-align:center;">
+                    📋 View Attendance
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Birthday Overlay (hidden) -->
+    <div class="birthday-overlay" id="birthday-overlay" style="display:none;" onclick="closeBirthday()">
+        <div class="birthday-card">
+            <div class="cake">🎂</div>
+            <h2 id="bday-title"></h2>
+            <p id="bday-subtitle"></p>
+            <div class="countdown" id="bday-countdown" style="font-size: 18px; font-weight: normal; color: #7F8C8D;">Wishing you a fantastic day! ✨</div>
+        </div>
+    </div>
+
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('capture-canvas');
+        const ctx = canvas.getContext('2d');
+        let scanning = false;
+        let cooldown = false;
+        let streamReady = false;
+
+        // --- Start webcam ---
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    streamReady = true;
+                    updateScanStatus('scanning', 'Scanning for faces...');
+                    scanLoop();
+                };
+            } catch (err) {
+                updateScanStatus('idle', 'Camera access denied');
+                document.getElementById('result-title').textContent = 'Camera not available';
+                document.getElementById('result-icon').textContent = '📵';
+            }
+        }
+
+        // --- Main scan loop ---
+        function scanLoop() {
+            if (!streamReady || cooldown) {
+                setTimeout(scanLoop, 1000);
+                return;
+            }
+
+            captureAndRecognize();
+            setTimeout(scanLoop, 2000);  // Scan every 2 seconds
+        }
+
+        async function captureAndRecognize() {
+            if (!streamReady || scanning) return;
+            scanning = true;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            const frameData = canvas.toDataURL('image/jpeg', 0.6);
+
+            try {
+                const res = await fetch('/api/recognize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameData })
+                });
+                const result = await res.json();
+                handleResult(result);
+            } catch (err) {
+                console.error('Recognition error:', err);
+            } finally {
+                scanning = false;
+            }
+        }
+
+        function handleResult(r) {
+            const card = document.getElementById('result-card');
+            const icon = document.getElementById('result-icon');
+            const title = document.getElementById('result-title');
+            const details = document.getElementById('result-details');
+            const message = document.getElementById('result-message');
+
+            // Reset classes
+            card.className = 'result-card';
+            message.className = 'result-message';
+
+            if (r.status === 'no_face') {
+                // Don't change the UI for no face — keep waiting
+                return;
+            }
+
+            if (r.status === 'marked') {
+                card.classList.add('success');
+                icon.textContent = '✅';
+                title.textContent = r.name;
+                details.style.display = 'block';
+                document.getElementById('r-name').textContent = r.name;
+                document.getElementById('r-roll').textContent = r.roll_no;
+                document.getElementById('r-class').textContent = r.class;
+                document.getElementById('r-smiled').textContent = r.smiled === 'Yes' ? '😊 Yes' : '😐 No';
+                document.getElementById('r-time').textContent = r.time;
+                message.textContent = '✅ ' + r.message;
+                message.classList.add('msg-green');
+                message.style.display = 'block';
+
+                // Birthday popup
+                if (r.is_birthday) {
+                    showBirthday(r.name, r.age);
+                }
+
+                // Cooldown to prevent re-scanning immediately
+                cooldown = true;
+                updateScanStatus('idle', 'Attendance marked. Resuming in 4s...');
+                setTimeout(() => { cooldown = false; resetDashboard(); updateScanStatus('scanning', 'Scanning for faces...'); }, 4000);
+
+            } else if (r.status === 'already_marked') {
+                card.classList.add('warning');
+                icon.textContent = r.gender === 'FEMALE' ? '👸' : '⚡';
+                title.textContent = r.name;
+                details.style.display = 'none';
+                message.textContent = r.message;
+                message.classList.add(r.gender === 'FEMALE' ? 'msg-pink' : 'msg-amber');
+                message.style.display = 'block';
+                cooldown = true;
+                setTimeout(() => { cooldown = false; resetDashboard(); }, 3000);
+
+            } else if (r.status === 'wrong_class') {
+                card.classList.add('error');
+                icon.textContent = '🚫';
+                title.textContent = r.name;
+                details.style.display = 'block';
+                document.getElementById('r-name').textContent = r.name;
+                document.getElementById('r-roll').textContent = r.roll_no;
+                document.getElementById('r-class').textContent = r.class;
+                document.getElementById('r-smiled').textContent = '—';
+                document.getElementById('r-time').textContent = '—';
+                message.textContent = '❌ ' + r.message;
+                message.classList.add('msg-red');
+                message.style.display = 'block';
+                cooldown = true;
+                setTimeout(() => { cooldown = false; resetDashboard(); }, 3000);
+
+            } else if (r.status === 'unknown') {
+                card.classList.add('error');
+                icon.textContent = '❓';
+                title.textContent = 'Unknown Face';
+                details.style.display = 'none';
+                message.textContent = r.message || 'Face not recognized.';
+                message.classList.add('msg-red');
+                message.style.display = 'block';
+                cooldown = true;
+                setTimeout(() => { cooldown = false; resetDashboard(); }, 2000);
+
+            } else if (r.status === 'no_encodings') {
+                icon.textContent = '⚠️';
+                title.textContent = r.message;
+                details.style.display = 'none';
+                message.style.display = 'none';
+            }
+        }
+
+        function resetDashboard() {
+            document.getElementById('result-card').className = 'result-card';
+            document.getElementById('result-icon').textContent = '👤';
+            document.getElementById('result-title').textContent = 'Waiting for student...';
+            document.getElementById('result-details').style.display = 'none';
+            document.getElementById('result-message').style.display = 'none';
+        }
+
+        function updateScanStatus(type, text) {
+            document.getElementById('scan-dot').className = 'scan-dot ' + type;
+            document.getElementById('scan-status').textContent = text;
+        }
+
+        // --- Birthday ---
+        function showBirthday(name, age) {
+            document.getElementById('bday-title').textContent = '🎉 Happy Birthday, ' + name + '! 🎉';
+            document.getElementById('bday-subtitle').textContent = 'Wishing you an amazing ' + (age || '') + ' year ahead!';
+            document.getElementById('birthday-overlay').style.display = 'flex';
+
+            // Show for 10 seconds total without the text countdown
+            setTimeout(closeBirthday, 10000);
+        }
+
+        function closeBirthday() {
+            document.getElementById('birthday-overlay').style.display = 'none';
+        }
+
+        // --- Global Birthday Banner ---
+        async function loadBirthdays() {
+            try {
+                const res = await fetch('/api/birthdays');
+                const names = await res.json();
+                if (names.length > 0) {
+                    const banner = document.getElementById('birthday-banner');
+                    banner.textContent = `🎉 Hey everyone! Wish a very Happy Birthday to ${names.join(', ')}! 🎂`;
+                    banner.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Birthday check failed:', err);
+            }
+        }
+
+        // --- Init ---
+        loadBirthdays();
+
+        {% if cv_available %}
+        startCamera();
+        {% else %}
+        updateScanStatus('idle', 'Face recognition not available');
+        document.getElementById('result-icon').textContent = '⚠️';
+        document.getElementById('result-title').textContent = 'Face recognition libraries not installed on the server.';
+        {% endif %}
+    </script>
+</body>
+</html>
