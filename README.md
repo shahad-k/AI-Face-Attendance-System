@@ -40,40 +40,40 @@ Designed to replace manual, error-prone attendance taking, this system provides 
 
 ## 🚀 Installation & Usage
 
-Follow these steps to run the AI Attendance System on your own local machine.
+## 🚀 Installation & Usage
 
-### 1. Download the Project
-You can either clone the repository via terminal or download it directly:
-- **Option A (Terminal):** 
-  ```bash
-  git clone https://github.com/yourusername/attendance-ai.git
-  cd attendance-ai
-  ```
-- **Option B (Direct Download):** Click the green **Code** button at the top of this page, select **Download ZIP**, extract the folder, and open it in your terminal.
+Follow these **3 extremely simple steps** to safely run the AI system on your computer.
 
-### 2. Install Dependencies
-Make sure you have Python installed. Then, install the required AI and web libraries:
+### Step 1: Download the Project
+The safest and best way to download this project is using Git. (Downloading via ZIP can trigger Windows security warnings, which we explain below).
+Open your terminal and paste this command:
+```bash
+git clone https://github.com/yourusername/attendance-ai.git
+```
+*If you downloaded the ZIP file instead, extract the folder to your computer.*
+
+### Step 2: Open Terminal & Install Dependencies
+1. Open the `attendance-ai` folder you just downloaded.
+2. **Windows Trick:** Click the folder's address bar at the very top, delete the text, type `cmd`, and hit **Enter**. This instantly opens a black terminal window in the right place!
+3. Paste this command to install the required AI libraries:
 ```bash
 pip install -r requirements.txt
 ```
-*(Note: `face_recognition` requires a C++ compiler to install `dlib`. If you are on Windows, you may need to install Visual Studio C++ Build Tools first).*
 
-### 3. Launch the System
-There are two easy ways to start the server:
+### Step 3: Launch the System!
+To start the AI server safely without any scary Windows security warnings, just paste this command into your terminal:
+```bash
+python run.py
+```
+🎉 **That's it!** The system will check your dependencies, boot up the server, and automatically pop open your web browser to the dashboard!
 
-- **Option A (The Automatic Way):**
-  Simply run the following command in your terminal:
-  ```bash
-  python run.py
-  ```
-  *This will automatically launch the AI server in the background and instantly pop open your web browser right to the application!*
+---
 
-- **Option B (The Manual Way):**
-  If you prefer to start the server directly without opening the browser automatically, run:
-  ```bash
-  python app.py
-  ```
-  Then, manually open your web browser and go to: 👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
+## 🛡️ Why NO `.bat` files? (Windows SmartScreen Explained)
+You might notice there are no `.bat` or `.exe` files in this project to double-click. **This is for your safety.**
+Whenever you download a ZIP file from the internet, Windows activates a security feature called **SmartScreen ("Mark of the Web")**. It aggressively blocks downloaded `.bat` files with a scary blue warning: *"Windows protected your PC / This file may be dangerous"*.
+
+To ensure everyone feels **100% safe** running this open-source project, we use a standard Python script (`run.py`). Running it via the terminal completely avoids false-alarm security blocks and ensures a clean, professional setup.
 
 *Note: On your very first run, the system will automatically create the SQLite database and necessary folders for you.*
 
