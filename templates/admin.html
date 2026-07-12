@@ -26,6 +26,9 @@
                 <a href="#" onclick="showPage('reports')" id="nav-reports">
                     📝 Reports
                 </a>
+                <a href="#" onclick="showPage('settings')" id="nav-settings">
+                    ⚙️ Settings
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm" style="width:100%;" id="admin-logout-btn">
@@ -114,6 +117,7 @@
                     <div class="section-header">
                         <h2>📚 Registered Students</h2>
                         <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showStudentModal()" style="margin-right:12px;">+ Add Student Manually</button>
                             <select id="student-class-filter" onchange="loadStudents()">
                                 {% for cls in classes %}
                                 <option value="{{ cls }}">{{ cls }}</option>
@@ -178,7 +182,137 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ==================== SETTINGS PAGE ==================== -->
+            <div id="page-settings" style="display:none;">
+                <div class="page-header">
+                    <h1>⚙️ System Settings</h1>
+                    <p>Manage Admin Security & Classes</p>
+                </div>
+
+                <!-- Admin Password Section -->
+                <div class="section-card" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h2>🔒 Admin Security</h2>
+                    </div>
+                    <div style="padding: 24px;">
+                        <button class="btn btn-secondary" id="btn-toggle-password" onclick="togglePasswordFields()">🔑 Change Admin Password</button>
+                        
+                        <div id="password-change-fields" style="display: none; max-width: 400px; margin-top: 16px;">
+                            <div class="form-group">
+                                <label>Current Admin Password</label>
+                                <input type="password" id="current-admin-password" placeholder="Enter current passcode" class="input-field">
+                            </div>
+                            <div class="form-group">
+                                <label>New Admin Password</label>
+                                <input type="password" id="new-admin-password" placeholder="Enter new passcode" class="input-field">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New Admin Password</label>
+                                <input type="password" id="confirm-admin-password" placeholder="Confirm new passcode" class="input-field">
+                            </div>
+                            <button class="btn btn-primary" style="margin-top: 8px;" onclick="changeAdminPassword()">Update Passcode</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Class Management Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📚 Class & PIN Management</h2>
+                        <button class="btn btn-primary" onclick="showClassModal()">+ Add Class</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Class Name</th>
+                                    <th>Login PIN</th>
+                                    <th>Mentor Name</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classes-body">
+                                <tr><td colspan="4"><div class="empty-state"><p>Loading classes...</p></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </main>
+    </div>
+
+    <!-- ====== MODALS ====== -->
+    <div id="class-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title">Add New Class</h2>
+            <input type="hidden" id="class-original-name">
+            <div class="form-group">
+                <label>Class Name</label>
+                <input type="text" id="class-name" class="input-field" placeholder="e.g. 10-A">
+            </div>
+            <div class="form-group">
+                <label>Class Login PIN</label>
+                <input type="text" id="class-pin" class="input-field" placeholder="e.g. 1001">
+            </div>
+            <div class="form-group">
+                <label>Mentor Name (Optional)</label>
+                <input type="text" id="class-mentor" class="input-field" placeholder="e.g. Mr. Smith">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background:var(--bg-input); color:var(--text-primary);" onclick="hideClassModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveClass()">Save Class</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Student Modal -->
+    <div id="student-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <h2>Add Student Manually</h2>
+            <div class="form-group">
+                <label>Student ID (Must be unique)</label>
+                <input type="text" id="m-student-id" class="input-field" placeholder="e.g. STU001">
+            </div>
+            <div class="form-group">
+                <label>Student Name</label>
+                <input type="text" id="m-student-name" class="input-field" placeholder="e.g. John Doe">
+            </div>
+            <div class="form-group">
+                <label>Roll Number (Must be unique)</label>
+                <input type="text" id="m-student-roll" class="input-field" placeholder="e.g. 101">
+            </div>
+            <div class="form-group">
+                <label>Class</label>
+                <select id="m-student-class" class="input-field">
+                    {% for cls in classes %}
+                    {% if cls != "All Classes" %}
+                    <option value="{{ cls }}">{{ cls }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select id="m-student-gender" class="input-field">
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date of Birth (DD-MM-YYYY)</label>
+                <input type="text" id="m-student-dob" class="input-field" placeholder="e.g. 15-06-2009">
+            </div>
+            <div class="form-group">
+                <label>Age</label>
+                <input type="number" id="m-student-age" class="input-field" placeholder="Auto-calculated" readonly>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background:var(--bg-input); color:var(--text-primary);" onclick="hideStudentModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveManualStudent()">Save Student</button>
+            </div>
+        </div>
     </div>
 
     <!-- ====== JAVASCRIPT ====== -->
@@ -198,10 +332,15 @@
             document.getElementById('page-dashboard').style.display = page === 'dashboard' ? 'block' : 'none';
             document.getElementById('page-students').style.display = page === 'students' ? 'block' : 'none';
             document.getElementById('page-reports').style.display = page === 'reports' ? 'block' : 'none';
+            document.getElementById('page-settings').style.display = page === 'settings' ? 'block' : 'none';
 
             // Update active nav
             document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
             document.getElementById(`nav-${page}`).classList.add('active');
+
+            if (page === 'settings') {
+                loadClasses();
+            }
         }
 
         // --- Load Admin Stats + Pie Chart ---
@@ -413,6 +552,211 @@
             div.textContent = String(text);
             return div.innerHTML;
         }
+
+        // --- Settings: Classes ---
+        async function loadClasses() {
+            try {
+                const res = await fetch('/api/classes');
+                const data = await res.json();
+                const tbody = document.getElementById('classes-body');
+                if(data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><p>No classes found.</p></div></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.map(c => `
+                    <tr>
+                        <td style="font-weight:bold; color:var(--text-primary);">${escapeHtml(c.class_name)}</td>
+                        <td><span class="badge badge-blue">${escapeHtml(c.pin)}</span></td>
+                        <td>${escapeHtml(c.mentor_name) || '<span style="color:var(--text-secondary)">—</span>'}</td>
+                        <td>
+                            <button class="btn btn-sm" style="background:var(--bg-input); color:var(--text-primary); margin-right:8px;" onclick="showClassModal('${escapeHtml(c.class_name)}', '${escapeHtml(c.pin)}', '${escapeHtml(c.mentor_name)}')">✏️ Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteClass('${escapeHtml(c.class_name)}')">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function showClassModal(className = '', pin = '', mentor = '') {
+            document.getElementById('class-original-name').value = className;
+            document.getElementById('class-name').value = className;
+            document.getElementById('class-pin').value = pin;
+            document.getElementById('class-mentor').value = mentor;
+            document.getElementById('modal-title').textContent = className ? 'Edit Class' : 'Add New Class';
+            document.getElementById('class-modal').style.display = 'flex';
+        }
+
+        function hideClassModal() {
+            document.getElementById('class-modal').style.display = 'none';
+        }
+
+        async function saveClass() {
+            const orig = document.getElementById('class-original-name').value;
+            const name = document.getElementById('class-name').value.trim();
+            const pin = document.getElementById('class-pin').value.trim();
+            const mentor = document.getElementById('class-mentor').value.trim();
+
+            if(!name || !pin) return alert("Class Name and PIN are required!");
+
+            try {
+                const res = await fetch('/api/classes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ original_name: orig, class_name: name, pin: pin, mentor_name: mentor })
+                });
+                const data = await res.json();
+                if(data.status === 'ok') {
+                    hideClassModal();
+                    loadClasses();
+                } else {
+                    alert(data.message);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteClass(className) {
+            if(!confirm(`Are you sure you want to delete class ${className}?`)) return;
+            try {
+                const res = await fetch(`/api/classes/${encodeURIComponent(className)}`, {method: 'DELETE'});
+                const data = await res.json();
+                if(data.status === 'ok') loadClasses();
+                else alert(data.message);
+            } catch(e) { console.error(e); }
+        }
+
+        // --- Settings: Admin Password ---
+        function togglePasswordFields() {
+            const fields = document.getElementById('password-change-fields');
+            const btn = document.getElementById('btn-toggle-password');
+            if (fields.style.display === 'none') {
+                fields.style.display = 'block';
+                btn.textContent = '❌ Close Password Panel';
+            } else {
+                fields.style.display = 'none';
+                btn.textContent = '🔑 Change Admin Password';
+                // Clear fields
+                document.getElementById('current-admin-password').value = '';
+                document.getElementById('new-admin-password').value = '';
+                document.getElementById('confirm-admin-password').value = '';
+            }
+        }
+
+        async function changeAdminPassword() {
+            const currentPwd = document.getElementById('current-admin-password').value.trim();
+            const pwd = document.getElementById('new-admin-password').value.trim();
+            const confirmPwd = document.getElementById('confirm-admin-password').value.trim();
+            
+            if(!currentPwd || !pwd || !confirmPwd) return alert("All password fields are required!");
+            if(pwd !== confirmPwd) return alert("New passwords do not match!");
+            
+            try {
+                const res = await fetch('/api/settings/password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ current_password: currentPwd, password: pwd })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.status === 'ok') {
+                    togglePasswordFields();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- Manual Student Add Modal ---
+        function showStudentModal() {
+            document.getElementById('m-student-id').value = '';
+            document.getElementById('m-student-name').value = '';
+            document.getElementById('m-student-roll').value = '';
+            document.getElementById('m-student-dob').value = '';
+            document.getElementById('m-student-age').value = '';
+            document.getElementById('student-modal').style.display = 'flex';
+        }
+
+        function hideStudentModal() {
+            document.getElementById('student-modal').style.display = 'none';
+        }
+
+        async function saveManualStudent() {
+            const id = document.getElementById('m-student-id').value.trim();
+            const name = document.getElementById('m-student-name').value.trim();
+            const roll = document.getElementById('m-student-roll').value.trim();
+            const cls = document.getElementById('m-student-class').value;
+            const gender = document.getElementById('m-student-gender').value;
+            const dob = document.getElementById('m-student-dob').value.trim();
+            const age = document.getElementById('m-student-age').value.trim();
+
+            if(!id || !name || !roll || !cls) {
+                return alert("Student ID, Name, Roll Number, and Class are required!");
+            }
+
+            try {
+                const res = await fetch('/api/students/manual', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        student_id: id,
+                        name: name,
+                        roll_no: roll,
+                        class: cls,
+                        gender: gender,
+                        dob: dob,
+                        age: age ? parseInt(age) : null
+                    })
+                });
+                const data = await res.json();
+                if(data.status === 'ok') {
+                    alert("✅ Student added successfully!");
+                    hideStudentModal();
+                    loadStudents(); // reload lists
+                    loadAdminStats(); // update stats
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            } catch(e) { 
+                console.error(e); 
+                alert("An error occurred while saving the student.");
+            }
+        }
+
+        // --- Auto format DOB and calculate Age (Manual Student Modal) ---
+        const manualDobInput = document.getElementById('m-student-dob');
+        const manualAgeInput = document.getElementById('m-student-age');
+
+        manualDobInput.addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, ''); // strip non-digits
+            if (v.length > 8) v = v.substring(0, 8); // max 8 digits
+            
+            // Auto add hyphens: DD-MM-YYYY
+            let formatted = v;
+            if (v.length > 4) {
+                formatted = v.substring(0, 2) + '-' + v.substring(2, 4) + '-' + v.substring(4);
+            } else if (v.length > 2) {
+                formatted = v.substring(0, 2) + '-' + v.substring(2);
+            }
+            e.target.value = formatted;
+
+            // Auto calculate age if fully entered
+            if (v.length === 8) {
+                const day = parseInt(v.substring(0, 2));
+                const month = parseInt(v.substring(2, 4));
+                const year = parseInt(v.substring(4, 8));
+                
+                if (month > 0 && month <= 12 && day > 0 && day <= 31) {
+                    const today = new Date();
+                    let age = today.getFullYear() - year;
+                    const m = today.getMonth() + 1 - month;
+                    if (m < 0 || (m === 0 && today.getDate() < day)) {
+                        age--;
+                    }
+                    if (age >= 0 && age < 150) {
+                        manualAgeInput.value = age;
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>

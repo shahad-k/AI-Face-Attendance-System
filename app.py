@@ -83,13 +83,79 @@ def get_db():
     return conn
 
 
+def init_db():
+    """Ensure database and required tables exist."""
+    db_folder = os.path.join(BASE_DIR, "database")
+    os.makedirs(db_folder, exist_ok=True)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Students & Attendance
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS students (
+        student_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        roll_no TEXT NOT NULL UNIQUE,
+        class TEXT NOT NULL,
+        age INTEGER,
+        dob TEXT,
+        gender TEXT DEFAULT 'MALE'
+    )''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        smiled TEXT NOT NULL,
+        FOREIGN KEY (student_id) REFERENCES students (student_id)
+    )''')
+    
+    # Classes Management
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS classes (
+        class_name TEXT PRIMARY KEY,
+        pin TEXT NOT NULL UNIQUE,
+        mentor_name TEXT DEFAULT ''
+    )''')
+    
+    # Settings Management
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )''')
+    
+    # Birthday Wishes table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS birthday_wishes (
+        student_id TEXT PRIMARY KEY,
+        date TEXT NOT NULL
+    )''')
+    
+    # Migrate initial data from config.py if tables are empty
+    cursor.execute("SELECT COUNT(*) as cnt FROM classes")
+    if cursor.fetchone()["cnt"] == 0:
+        for cls, pin in config.TEACHER_PINS.items():
+            cursor.execute("INSERT INTO classes (class_name, pin, mentor_name) VALUES (?, ?, ?)", (cls, pin, ""))
+            
+    cursor.execute("SELECT COUNT(*) as cnt FROM settings")
+    if cursor.fetchone()["cnt"] == 0:
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", config.ADMIN_PASSWORD))
+        
+    conn.commit()
+    conn.close()
+
+
 # ============================================================
 # AUTH DECORATORS
 # ============================================================
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "logged_in" not in session:
+        # Allow admins to access teacher APIs (fixes infinite loading bug in admin panel)
+        if "logged_in" not in session and not session.get("admin"):
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)
     return decorated
@@ -109,28 +175,50 @@ def admin_required(f):
 # ============================================================
 @app.route("/")
 def login_page():
-    classes = list(config.TEACHER_PINS.keys())
+    if "logged_in" in session:
+        return redirect(url_for("camera_page"))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
+    classes = [r["class_name"] for r in cursor.fetchall()]
+    conn.close()
     return render_template("login.html", classes=classes)
 
 
 @app.route("/login", methods=["POST"])
 def do_login():
-    selected_class = request.form.get("class_name")
+    selected_class = request.form.get("class")
     pin = request.form.get("pin")
-    correct_pin = config.TEACHER_PINS.get(selected_class)
-    if pin == correct_pin:
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT pin FROM classes WHERE class_name = ?", (selected_class,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    correct_pin = row["pin"] if row else None
+    
+    if correct_pin and pin == correct_pin:
         session["logged_in"] = True
         session["current_class"] = selected_class
         return redirect(url_for("camera_page"))
     else:
-        classes = list(config.TEACHER_PINS.keys())
-        return render_template("login.html", classes=classes, error="Incorrect PIN for this class.")
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
+        classes = [r["class_name"] for r in cursor.fetchall()]
+        conn.close()
+        return render_template("login.html", classes=classes, error="Invalid PIN for this class.")
 
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    classes = ["All Classes"] + list(config.TEACHER_PINS.keys())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
+    classes = ["All Classes"] + [r["class_name"] for r in cursor.fetchall()]
+    conn.close()
     current_class = session.get("current_class", "All Classes")
     return render_template("dashboard.html", classes=classes, current_class=current_class)
 
@@ -140,14 +228,27 @@ def dashboard():
 def camera_page():
     """Live camera page for AI face recognition attendance."""
     current_class = session.get("current_class", "All Classes")
-    return render_template("camera.html", current_class=current_class, cv_available=CV_AVAILABLE)
+    mentor_name = ""
+    if current_class != "All Classes":
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT mentor_name FROM classes WHERE class_name = ?", (current_class,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            mentor_name = row["mentor_name"]
+    return render_template("camera.html", current_class=current_class, mentor_name=mentor_name, cv_available=CV_AVAILABLE)
 
 
 @app.route("/register")
 @login_required
 def register_page():
     """Student registration page with webcam photo capture."""
-    classes = list(config.TEACHER_PINS.keys())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
+    classes = [r["class_name"] for r in cursor.fetchall()]
+    conn.close()
     return render_template("register.html", classes=classes)
 
 
@@ -159,7 +260,15 @@ def admin_login_page():
 @app.route("/admin/login", methods=["POST"])
 def admin_do_login():
     password = request.form.get("password")
-    if password == config.ADMIN_PASSWORD:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
+    row = cursor.fetchone()
+    conn.close()
+    
+    correct_password = row["value"] if row else config.ADMIN_PASSWORD
+    
+    if password == correct_password:
         session["admin"] = True
         return redirect(url_for("admin_panel"))
     return render_template("admin_login.html", error="Incorrect Password!")
@@ -168,7 +277,11 @@ def admin_do_login():
 @app.route("/admin/panel")
 @admin_required
 def admin_panel():
-    classes = ["All Classes"] + list(config.TEACHER_PINS.keys())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
+    classes = ["All Classes"] + [r["class_name"] for r in cursor.fetchall()]
+    conn.close()
     return render_template("admin.html", classes=classes)
 
 
@@ -223,7 +336,22 @@ def api_stats():
 @app.route("/api/birthdays")
 @login_required
 def api_birthdays():
-    return jsonify(check_and_update_birthdays())
+    # Update student ages in DB if today is their birthday
+    check_and_update_birthdays()
+    
+    # Only return names of students whose birthday is today AND who checked in today
+    today_str = datetime.now().strftime("%d-%m-%Y")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.name 
+        FROM birthday_wishes bw 
+        JOIN students s ON bw.student_id = s.student_id 
+        WHERE bw.date = ?
+    """, (today_str,))
+    names = [row["name"] for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(names)
 
 
 @app.route("/api/students")
@@ -268,6 +396,136 @@ def api_delete_student(roll_no):
         return jsonify({"status": "error", "message": str(e)})
     finally:
         conn.close()
+
+
+@app.route("/api/classes", methods=["GET", "POST"])
+@admin_required
+def api_classes():
+    conn = get_db()
+    cursor = conn.cursor()
+    if request.method == "GET":
+        cursor.execute("SELECT class_name, pin, mentor_name FROM classes ORDER BY class_name")
+        classes = [{"class_name": r["class_name"], "pin": r["pin"], "mentor_name": r["mentor_name"]} for r in cursor.fetchall()]
+        conn.close()
+        return jsonify(classes)
+    elif request.method == "POST":
+        data = request.json
+        original_name = data.get("original_name")
+        class_name = data.get("class_name")
+        pin = data.get("pin")
+        mentor_name = data.get("mentor_name", "")
+        
+        try:
+            if original_name:
+                cursor.execute("UPDATE classes SET class_name=?, pin=?, mentor_name=? WHERE class_name=?", 
+                               (class_name, pin, mentor_name, original_name))
+            else:
+                cursor.execute("INSERT INTO classes (class_name, pin, mentor_name) VALUES (?, ?, ?)", 
+                               (class_name, pin, mentor_name))
+            conn.commit()
+            return jsonify({"status": "ok", "message": "Class saved successfully"})
+        except sqlite3.IntegrityError:
+            return jsonify({"status": "error", "message": "Class name or PIN already exists."})
+        finally:
+            conn.close()
+
+
+@app.route("/api/classes/<class_name>", methods=["DELETE"])
+@admin_required
+def api_delete_class(class_name):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM classes WHERE class_name = ?", (class_name,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "message": "Class deleted successfully"})
+
+
+@app.route("/api/student/check/<student_id>", methods=["GET"])
+@login_required
+def api_check_student(student_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT student_id, name, roll_no, class, age, dob, gender FROM students WHERE student_id = ?", (student_id.strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return jsonify({
+            "exists": True,
+            "student": {
+                "student_id": row["student_id"],
+                "name": row["name"],
+                "roll_no": row["roll_no"],
+                "class": row["class"],
+                "age": row["age"],
+                "dob": row["dob"],
+                "gender": row["gender"]
+            }
+        })
+    return jsonify({"exists": False})
+
+
+@app.route("/api/students/manual", methods=["POST"])
+@admin_required
+def api_add_student_manual():
+    data = request.json
+    student_id = data.get("student_id", "").strip()
+    name = data.get("name", "").strip()
+    roll_no = data.get("roll_no", "").strip()
+    class_name = data.get("class", "").strip()
+    gender = data.get("gender", "MALE").strip()
+    age = data.get("age")
+    dob = data.get("dob", "").strip()
+    
+    if not student_id or not name or not roll_no or not class_name:
+        return jsonify({"status": "error", "message": "Required fields are missing."})
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Check duplicate student_id
+        cursor.execute("SELECT 1 FROM students WHERE student_id = ?", (student_id,))
+        if cursor.fetchone():
+            return jsonify({"status": "error", "message": "Student ID already exists."})
+            
+        # Check duplicate roll_no
+        cursor.execute("SELECT 1 FROM students WHERE roll_no = ?", (roll_no,))
+        if cursor.fetchone():
+            return jsonify({"status": "error", "message": "Roll Number already exists."})
+            
+        cursor.execute("""
+            INSERT INTO students (student_id, name, roll_no, class, age, dob, gender)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (student_id, name, roll_no, class_name, age, dob, gender))
+        conn.commit()
+        return jsonify({"status": "ok", "message": "Student added successfully."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        conn.close()
+
+
+@app.route("/api/settings/password", methods=["POST"])
+@admin_required
+def api_change_password():
+    data = request.json
+    current_password = data.get("current_password")
+    new_password = data.get("password")
+    if not current_password or not new_password:
+        return jsonify({"status": "error", "message": "All password fields are required"})
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
+    row = cursor.fetchone()
+    correct_password = row["value"] if row else config.ADMIN_PASSWORD
+    if current_password != correct_password:
+        conn.close()
+        return jsonify({"status": "error", "message": "Incorrect current password"})
+    cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_password'", (new_password,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "message": "Admin password updated successfully"})
+
 
 def regenerate_encodings_bg():
     """Background task to regenerate encodings after deletion."""
@@ -371,8 +629,13 @@ def api_recognize():
                         "message": f"Wrong Room! This session is for {current_class}."
                     })
 
-                # ALREADY MARKED
-                if roll_no in marked_today:
+                # ALREADY MARKED (Database check)
+                now = datetime.now()
+                date_str = now.strftime("%d-%m-%Y")
+                time_str = now.strftime("%H:%M:%S")
+                
+                cursor.execute("SELECT 1 FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
+                if cursor.fetchone():
                     conn.close()
                     if gender == "FEMALE":
                         msg = "My lady... you already marked your presence."
@@ -396,24 +659,19 @@ def api_recognize():
                         is_smiling = "Yes"
 
                 # MARK ATTENDANCE
-                now = datetime.now()
-                date_str = now.strftime("%d-%m-%Y")
-                time_str = now.strftime("%H:%M:%S")
                 cursor.execute("INSERT INTO attendance (student_id, date, time, smiled) VALUES (?, ?, ?, ?)",
                                (student_id, date_str, time_str, is_smiling))
                 conn.commit()
-                marked_today.add(roll_no)
 
-                # BIRTHDAY CHECK
+                # BIRTHDAY CHECK (Saves birthday wishes dynamically)
                 is_birthday = False
-                if dob:
-                    safe_dob = str(dob).replace(" ", "-").replace("/", "-")
-                    today_fmt1 = now.strftime("%m-%d")
-                    today_fmt2 = now.strftime("%d-%m")
-                    if today_fmt1 in safe_dob or today_fmt2 in safe_dob:
-                        if roll_no not in wished_today:
-                            wished_today.add(roll_no)
-                            is_birthday = True
+                if dob and len(dob) >= 5:
+                    dob_day_month = dob[:5]
+                    today_day_month = now.strftime("%d-%m")
+                    if dob_day_month == today_day_month:
+                        is_birthday = True
+                        cursor.execute("INSERT OR REPLACE INTO birthday_wishes (student_id, date) VALUES (?, ?)", (student_id, date_str))
+                        conn.commit()
 
                 conn.close()
                 return jsonify({
@@ -439,8 +697,16 @@ def api_register():
     data = request.json
     password = data.get("password", "")
 
-    if password != config.ADMIN_PASSWORD:
-        return jsonify({"status": "error", "message": "Incorrect admin password."})
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
+    row = cursor.fetchone()
+    
+    correct_password = row["value"] if row else config.ADMIN_PASSWORD
+    if password != correct_password:
+        conn.close()
+        return jsonify({"status": "error", "message": "Incorrect Admin Master Password!"})
+    
 
     student_id = data.get("student_id", "").strip()
     name = data.get("name", "").strip()
@@ -597,6 +863,7 @@ def export_csv():
 # LAUNCH
 # ============================================================
 if __name__ == "__main__":
+    init_db()
     print("\n  AI Attendance System - Web Interface")
     print("  Open http://127.0.0.1:5000/ in your browser")
     if not CV_AVAILABLE:

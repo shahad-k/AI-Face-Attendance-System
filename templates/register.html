@@ -396,6 +396,111 @@
                 }
             }
         });
+
+        // --- Smart Student Registration Flow ---
+        const studentIdInput = document.getElementById('f-student-id');
+        let checkTimeout = null;
+
+        studentIdInput.addEventListener('input', function() {
+            clearTimeout(checkTimeout);
+            const studentId = this.value.trim();
+            if (!studentId) {
+                resetFormState(false);
+                return;
+            }
+            
+            checkTimeout = setTimeout(() => {
+                checkStudentExistence(studentId);
+            }, 300);
+        });
+
+        async function checkStudentExistence(studentId) {
+            try {
+                const res = await fetch(`/api/student/check/${encodeURIComponent(studentId)}`);
+                const data = await res.json();
+                const el = document.getElementById('save-result');
+                
+                if (data.exists) {
+                    // Autofill
+                    document.getElementById('f-name').value = data.student.name;
+                    document.getElementById('f-roll').value = data.student.roll_no;
+                    document.getElementById('f-class').value = data.student.class;
+                    document.getElementById('f-gender').value = data.student.gender;
+                    document.getElementById('f-age').value = data.student.age;
+                    document.getElementById('f-dob').value = data.student.dob;
+                    
+                    // Lock fields
+                    lockFields(true);
+                    
+                    // Direct to face scan
+                    savedRollNo = data.student.roll_no;
+                    document.getElementById('capture-btn').disabled = false;
+                    document.getElementById('direction-label').textContent = 'Student found! Ready to scan face. Click Start Smart Capture.';
+                    
+                    document.getElementById('sn-2').className = 'step-number done';
+                    document.getElementById('sn-3').className = 'step-number active';
+                    
+                    el.className = 'result-banner success';
+                    el.textContent = '✅ Student details retrieved from database. You can proceed directly to Face Capture.';
+                    el.style.display = 'block';
+                    
+                    // Disable save button since it's already in DB
+                    document.getElementById('save-btn').disabled = true;
+                    document.getElementById('save-btn').textContent = 'Already Saved in DB';
+                } else {
+                    // Reset fields except Student ID itself
+                    resetFormState(true);
+                }
+            } catch (err) {
+                console.error('Error checking student:', err);
+            }
+        }
+
+        function lockFields(lock) {
+            const fields = ['f-name', 'f-roll', 'f-class', 'f-gender', 'f-age', 'f-dob'];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (lock) {
+                    el.setAttribute('readonly', 'true');
+                    if (el.tagName === 'SELECT') {
+                        el.setAttribute('disabled', 'true');
+                    }
+                } else {
+                    el.removeAttribute('readonly');
+                    if (el.tagName === 'SELECT') {
+                        el.removeAttribute('disabled');
+                    }
+                }
+            });
+        }
+
+        function resetFormState(allowManual) {
+            if (allowManual) {
+                lockFields(false);
+                document.getElementById('save-btn').disabled = false;
+                document.getElementById('save-btn').textContent = '💾 Save to Database';
+                document.getElementById('capture-btn').disabled = true;
+                document.getElementById('direction-label').textContent = 'Step 2 first: Save student details';
+                document.getElementById('sn-2').className = 'step-number active';
+                document.getElementById('sn-3').className = 'step-number pending';
+                document.getElementById('save-result').style.display = 'none';
+            } else {
+                // Clear inputs
+                const inputs = ['f-name', 'f-roll', 'f-age', 'f-dob'];
+                inputs.forEach(id => document.getElementById(id).value = '');
+                document.getElementById('f-gender').selectedIndex = 0;
+                document.getElementById('f-class').selectedIndex = 0;
+                
+                lockFields(false);
+                document.getElementById('save-btn').disabled = false;
+                document.getElementById('save-btn').textContent = '💾 Save to Database';
+                document.getElementById('capture-btn').disabled = true;
+                document.getElementById('direction-label').textContent = 'Step 2 first: Save student details';
+                document.getElementById('sn-2').className = 'step-number active';
+                document.getElementById('sn-3').className = 'step-number pending';
+                document.getElementById('save-result').style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
