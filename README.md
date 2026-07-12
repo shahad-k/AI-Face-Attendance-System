@@ -58,20 +58,21 @@ pip install -r requirements.txt
 ```
 *(Note: `face_recognition` requires a C++ compiler to install `dlib`. If you are on Windows, you may need to install Visual Studio C++ Build Tools first).*
 
-### 3. Launch the System
-There are two ways to start the server:
-- **Using the Terminal:**
+### 3. Launch the System (One-Click)
+There are two easy ways to start the server:
+
+- **Option A (The Automatic Way - Windows Only):**
+  Simply double-click the **`run_local.bat`** file in your project folder! 
+  *This will automatically launch the AI server in the background and pop open your web browser right to the application.*
+
+- **Option B (The Manual Way):**
+  If you are on Mac/Linux or prefer the terminal, run:
   ```bash
   python app.py
   ```
-- **Using the Shortcut (Windows only):**
-  Simply double-click the `start.bat` file in the project folder to instantly launch the server and tunnel!
+  Then, manually open your web browser and go to: 👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-*On your first run, the system will automatically create the SQLite database and necessary folders.*
-
-### 4. Open the Web App
-Once the server is running, open your web browser and go to:
-👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
+*Note: On your very first run, the system will automatically create the SQLite database and necessary folders for you.*
 
 ---
 
