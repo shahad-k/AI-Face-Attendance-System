@@ -116,9 +116,16 @@ def init_db():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS classes (
         class_name TEXT PRIMARY KEY,
-        pin TEXT NOT NULL UNIQUE,
+        passcode TEXT NOT NULL UNIQUE,
         mentor_name TEXT DEFAULT ''
     )''')
+    
+    # Ensure classes table has passcode instead of pin (migration)
+    try:
+        cursor.execute("ALTER TABLE classes RENAME COLUMN pin TO passcode")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
     
     # Settings Management
     cursor.execute('''
@@ -138,7 +145,7 @@ def init_db():
     cursor.execute("SELECT COUNT(*) as cnt FROM classes")
     if cursor.fetchone()["cnt"] == 0:
         for cls, pin in config.TEACHER_PINS.items():
-            cursor.execute("INSERT INTO classes (class_name, pin, mentor_name) VALUES (?, ?, ?)", (cls, pin, ""))
+            cursor.execute("INSERT INTO classes (class_name, passcode, mentor_name) VALUES (?, ?, ?)", (cls, pin, ""))
             
     cursor.execute("SELECT COUNT(*) as cnt FROM settings")
     if cursor.fetchone()["cnt"] == 0:
@@ -187,22 +194,29 @@ def login_page():
 
 @app.route("/login", methods=["POST"])
 def do_login():
-    selected_class = request.form.get("class")
-    pin = request.form.get("pin")
+    selected_class = request.form.get("class_name") or request.form.get("class")
+    entered_pin = request.form.get("pin")
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT pin FROM classes WHERE class_name = ?", (selected_class,))
+    cursor.execute("SELECT passcode FROM classes WHERE class_name = ?", (selected_class,))
     row = cursor.fetchone()
     conn.close()
     
-    correct_pin = row["pin"] if row else None
+    db_passcode = row["passcode"] if row else None
     
-    if correct_pin and pin == correct_pin:
+    # Temporary Debug Safety Check
+    print(f"[DEBUG LOGIN] Selected Class: {selected_class}")
+    print(f"[DEBUG LOGIN] Entered PIN: '{entered_pin}' (type: {type(entered_pin)})")
+    print(f"[DEBUG LOGIN] Database Passcode: '{db_passcode}' (type: {type(db_passcode)})")
+    
+    if db_passcode is not None and str(entered_pin).strip() == str(db_passcode).strip():
         session["logged_in"] = True
         session["current_class"] = selected_class
+        print("[DEBUG LOGIN] Validation Successful")
         return redirect(url_for("camera_page"))
     else:
+        print("[DEBUG LOGIN] Validation Failed")
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT class_name FROM classes ORDER BY class_name")
@@ -404,28 +418,28 @@ def api_classes():
     conn = get_db()
     cursor = conn.cursor()
     if request.method == "GET":
-        cursor.execute("SELECT class_name, pin, mentor_name FROM classes ORDER BY class_name")
-        classes = [{"class_name": r["class_name"], "pin": r["pin"], "mentor_name": r["mentor_name"]} for r in cursor.fetchall()]
+        cursor.execute("SELECT class_name, passcode, mentor_name FROM classes ORDER BY class_name")
+        classes = [{"class_name": r["class_name"], "passcode": r["passcode"], "pin": r["passcode"], "mentor_name": r["mentor_name"]} for r in cursor.fetchall()]
         conn.close()
         return jsonify(classes)
     elif request.method == "POST":
         data = request.json
         original_name = data.get("original_name")
         class_name = data.get("class_name")
-        pin = data.get("pin")
+        passcode = data.get("passcode") or data.get("pin")
         mentor_name = data.get("mentor_name", "")
         
         try:
             if original_name:
-                cursor.execute("UPDATE classes SET class_name=?, pin=?, mentor_name=? WHERE class_name=?", 
-                               (class_name, pin, mentor_name, original_name))
+                cursor.execute("UPDATE classes SET class_name=?, passcode=?, mentor_name=? WHERE class_name=?", 
+                               (class_name, passcode, mentor_name, original_name))
             else:
-                cursor.execute("INSERT INTO classes (class_name, pin, mentor_name) VALUES (?, ?, ?)", 
-                               (class_name, pin, mentor_name))
+                cursor.execute("INSERT INTO classes (class_name, passcode, mentor_name) VALUES (?, ?, ?)", 
+                               (class_name, passcode, mentor_name))
             conn.commit()
             return jsonify({"status": "ok", "message": "Class saved successfully"})
         except sqlite3.IntegrityError:
-            return jsonify({"status": "error", "message": "Class name or PIN already exists."})
+            return jsonify({"status": "error", "message": "Class name or Passcode already exists."})
         finally:
             conn.close()
 

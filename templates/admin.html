@@ -253,8 +253,8 @@
                 <input type="text" id="class-name" class="input-field" placeholder="e.g. 10-A">
             </div>
             <div class="form-group">
-                <label>Class Login PIN</label>
-                <input type="text" id="class-pin" class="input-field" placeholder="e.g. 1001">
+                <label>Class Login Passcode</label>
+                <input type="text" id="class-passcode" class="input-field" placeholder="e.g. 1001">
             </div>
             <div class="form-group">
                 <label>Mentor Name (Optional)</label>
@@ -566,10 +566,10 @@
                 tbody.innerHTML = data.map(c => `
                     <tr>
                         <td style="font-weight:bold; color:var(--text-primary);">${escapeHtml(c.class_name)}</td>
-                        <td><span class="badge badge-blue">${escapeHtml(c.pin)}</span></td>
+                        <td><span class="badge badge-blue">${escapeHtml(c.passcode)}</span></td>
                         <td>${escapeHtml(c.mentor_name) || '<span style="color:var(--text-secondary)">—</span>'}</td>
                         <td>
-                            <button class="btn btn-sm" style="background:var(--bg-input); color:var(--text-primary); margin-right:8px;" onclick="showClassModal('${escapeHtml(c.class_name)}', '${escapeHtml(c.pin)}', '${escapeHtml(c.mentor_name)}')">✏️ Edit</button>
+                            <button class="btn btn-sm" style="background:var(--bg-input); color:var(--text-primary); margin-right:8px;" onclick="showClassModal('${escapeHtml(c.class_name)}', '${escapeHtml(c.passcode)}', '${escapeHtml(c.mentor_name)}')">✏️ Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteClass('${escapeHtml(c.class_name)}')">🗑️</button>
                         </td>
                     </tr>
@@ -579,10 +579,10 @@
             }
         }
 
-        function showClassModal(className = '', pin = '', mentor = '') {
+        function showClassModal(className = '', passcode = '', mentor = '') {
             document.getElementById('class-original-name').value = className;
             document.getElementById('class-name').value = className;
-            document.getElementById('class-pin').value = pin;
+            document.getElementById('class-passcode').value = passcode;
             document.getElementById('class-mentor').value = mentor;
             document.getElementById('modal-title').textContent = className ? 'Edit Class' : 'Add New Class';
             document.getElementById('class-modal').style.display = 'flex';
@@ -595,16 +595,16 @@
         async function saveClass() {
             const orig = document.getElementById('class-original-name').value;
             const name = document.getElementById('class-name').value.trim();
-            const pin = document.getElementById('class-pin').value.trim();
+            const passcode = document.getElementById('class-passcode').value.trim();
             const mentor = document.getElementById('class-mentor').value.trim();
 
-            if(!name || !pin) return alert("Class Name and PIN are required!");
+            if(!name || !passcode) return alert("Class Name and Passcode are required!");
 
             try {
                 const res = await fetch('/api/classes', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ original_name: orig, class_name: name, pin: pin, mentor_name: mentor })
+                    body: JSON.stringify({ original_name: orig, class_name: name, passcode: passcode, mentor_name: mentor })
                 });
                 const data = await res.json();
                 if(data.status === 'ok') {
