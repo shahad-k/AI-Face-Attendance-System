@@ -38,21 +38,40 @@ Designed to replace manual, error-prone attendance taking, this system provides 
 
 ---
 
-## 🚀 Quick Start — Local Server
+## 🚀 Installation & Usage
 
-### 1. Install Dependencies
+Follow these steps to run the AI Attendance System on your own local machine.
+
+### 1. Download the Project
+You can either clone the repository via terminal or download it directly:
+- **Option A (Terminal):** 
+  ```bash
+  git clone https://github.com/yourusername/attendance-ai.git
+  cd attendance-ai
+  ```
+- **Option B (Direct Download):** Click the green **Code** button at the top of this page, select **Download ZIP**, extract the folder, and open it in your terminal.
+
+### 2. Install Dependencies
+Make sure you have Python installed. Then, install the required AI and web libraries:
 ```bash
-pip install flask opencv-python numpy face_recognition
+pip install -r requirements.txt
 ```
+*(Note: `face_recognition` requires a C++ compiler to install `dlib`. If you are on Windows, you may need to install Visual Studio C++ Build Tools first).*
 
-### 2. Launch the Web App
-```bash
-python app.py
-```
-*The system will automatically initialize the database on first run.*
+### 3. Launch the System
+There are two ways to start the server:
+- **Using the Terminal:**
+  ```bash
+  python app.py
+  ```
+- **Using the Shortcut (Windows only):**
+  Simply double-click the `start.bat` file in the project folder to instantly launch the server and tunnel!
 
-### 3. Open in Browser
-Go to [http://127.0.0.1:5000](http://127.0.0.1:5000) in your web browser!
+*On your first run, the system will automatically create the SQLite database and necessary folders.*
+
+### 4. Open the Web App
+Once the server is running, open your web browser and go to:
+👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
 
