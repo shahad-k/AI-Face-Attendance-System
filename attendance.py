@@ -3,10 +3,17 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import sqlite3
 import csv
+import os
 from datetime import datetime
+
+# --- IMPORT CONFIG ---
+from utils import config
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("green")
+
+# --- Resolve all paths relative to this script's location ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class AttendanceViewer:
     def __init__(self, window):
@@ -38,7 +45,7 @@ class AttendanceViewer:
         
         # Class Filter Dropdown
         self.filter_var = ctk.StringVar(value="All Classes")
-        self.classes_list = ["All Classes", "10-A", "10-B", "11-Science", "11-Commerce", "12-Science", "12-Arts"]
+        self.classes_list = ["All Classes"] + list(config.TEACHER_PINS.keys())
         self.class_filter = ctk.CTkOptionMenu(self.top_frame, values=self.classes_list, variable=self.filter_var, command=self.load_data)
         self.class_filter.pack(side="left", padx=20)
         
@@ -96,7 +103,7 @@ class AttendanceViewer:
         selected_class = self.filter_var.get()
         
         try:
-            conn = sqlite3.connect("database/attendance_system.db")
+            conn = sqlite3.connect(os.path.join(BASE_DIR, config.DB_PATH))
             cursor = conn.cursor()
             
             # INNER JOIN combines the students table and the attendance table

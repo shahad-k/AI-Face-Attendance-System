@@ -11,8 +11,11 @@ import os
 import subprocess
 import sys
 
-from utils import helpers
+from utils import helpers, config
 from birthday_ui import BirthdayPopup 
+
+# --- Resolve all paths relative to this script's location ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 ctk.set_appearance_mode("Dark") 
 ctk.set_default_color_theme("green") 
@@ -35,7 +38,8 @@ class AttendanceApp:
         self.is_processing = False 
 
         try:
-            with open("encodings.pickle", "rb") as f:
+            encodings_path = os.path.join(BASE_DIR, config.ENCODINGS_FILE)
+            with open(encodings_path, "rb") as f:
                 data = pickle.load(f)
                 self.known_encodings = data["encodings"]
                 self.known_roll_nos = data["roll_nos"]
@@ -109,7 +113,7 @@ class AttendanceApp:
         self.is_processing = True
 
         try:
-            conn = sqlite3.connect("database/attendance_system.db")
+            conn = sqlite3.connect(os.path.join(BASE_DIR, config.DB_PATH))
             cursor = conn.cursor()
             
             cursor.execute("SELECT student_id, name, class, gender, age, dob FROM students WHERE roll_no = ?", (roll_no,))
@@ -189,8 +193,9 @@ class AttendanceApp:
     def open_registration(self):
         self.status_lbl.configure(text="Camera paused. Registration open...", text_color="#FFD700")
         self.cap.release()
-        subprocess.run([sys.executable, "register.py"])
-        with open("encodings.pickle", "rb") as f:
+        subprocess.run([sys.executable, os.path.join(BASE_DIR, "register.py")])
+        encodings_path = os.path.join(BASE_DIR, config.ENCODINGS_FILE)
+        with open(encodings_path, "rb") as f:
             data = pickle.load(f)
             self.known_encodings = data["encodings"]
             self.known_roll_nos = data["roll_nos"]

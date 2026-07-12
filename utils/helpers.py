@@ -1,12 +1,19 @@
 import sqlite3
+import os
 from datetime import datetime
+
+# --- IMPORT CONFIG ---
+from utils import config
+
+# --- Resolve all paths relative to the project root ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def check_and_update_birthdays():
     """
     Checks if today is any student's birthday, updates their age, 
     and returns a list of names to display on the UI banner.
     """
-    conn = sqlite3.connect("database/attendance_system.db")
+    conn = sqlite3.connect(os.path.join(BASE_DIR, config.DB_PATH))
     cursor = conn.cursor()
     
     # Get today's date and year

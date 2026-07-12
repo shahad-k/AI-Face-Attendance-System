@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS students (
     roll_no TEXT NOT NULL UNIQUE,
     class TEXT NOT NULL,
     age INTEGER,
-    dob TEXT
+    dob TEXT,
+    gender TEXT DEFAULT 'MALE'
 )
 ''')
 

@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import tkinter.ttk as ttk
 import sqlite3
+import os
 from datetime import datetime
 from tkinter import messagebox
 import matplotlib.pyplot as plt
@@ -41,7 +42,7 @@ class AdminPanel:
         sys.exit(0)
 
     def verify_login(self):
-        if self.pass_entry.get() == "admin":
+        if self.pass_entry.get() == config.ADMIN_PASSWORD:
             self.login_frame.destroy()
             self.build_main_layout()
             self.show_dashboard() # Show the dashboard by default
@@ -114,7 +115,7 @@ class AdminPanel:
         logs = []
 
         try:
-            conn = sqlite3.connect("database/attendance_system.db")
+            conn = sqlite3.connect(os.path.join(BASE_DIR, config.DB_PATH))
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM students")
             total_students = cursor.fetchone()[0]
