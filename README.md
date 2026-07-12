@@ -58,15 +58,18 @@ pip install -r requirements.txt
 ```
 *(Note: `face_recognition` requires a C++ compiler to install `dlib`. If you are on Windows, you may need to install Visual Studio C++ Build Tools first).*
 
-### 3. Launch the System (One-Click)
+### 3. Launch the System
 There are two easy ways to start the server:
 
-- **Option A (The Automatic Way - Windows Only):**
-  Simply double-click the **`run_local.bat`** file in your project folder! 
-  *This will automatically launch the AI server in the background and pop open your web browser right to the application.*
+- **Option A (The Automatic Way):**
+  Simply run the following command in your terminal:
+  ```bash
+  python run.py
+  ```
+  *This will automatically launch the AI server in the background and instantly pop open your web browser right to the application!*
 
 - **Option B (The Manual Way):**
-  If you are on Mac/Linux or prefer the terminal, run:
+  If you prefer to start the server directly without opening the browser automatically, run:
   ```bash
   python app.py
   ```
