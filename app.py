@@ -380,32 +380,40 @@ def api_students():
                      "class": s["class"], "age": s["age"], "dob": s["dob"], "gender": s["gender"]} for s in students])
 
 
-@app.route("/api/student/<roll_no>/delete", methods=["POST"])
+@app.route("/api/student/<student_id>/delete", methods=["POST"])
 @admin_required
-def api_delete_student(roll_no):
+def api_delete_student(student_id):
     """Deletes a student from the DB and removes their dataset photos."""
     conn = get_db()
     cursor = conn.cursor()
     try:
-        # Delete from DB
-        cursor.execute("DELETE FROM students WHERE roll_no = ?", (roll_no,))
+        # Get roll_no to delete photos
+        cursor.execute("SELECT roll_no FROM students WHERE student_id = ?", (student_id,))
+        row = cursor.fetchone()
+        roll_no = row["roll_no"] if row else None
+
+        # Delete from DB tables (cascade-like deletion)
+        cursor.execute("DELETE FROM attendance WHERE student_id = ?", (student_id,))
+        cursor.execute("DELETE FROM birthday_wishes WHERE student_id = ?", (student_id,))
+        cursor.execute("DELETE FROM students WHERE student_id = ?", (student_id,))
         conn.commit()
 
-        # Delete from dataset folder
-        dataset_path = os.path.join(BASE_DIR, config.DATASET_PATH)
-        if os.path.exists(dataset_path):
-            for file_name in os.listdir(dataset_path):
-                if file_name.startswith(f"{roll_no}_"):
-                    os.remove(os.path.join(dataset_path, file_name))
+        # Print debug log
+        print("Deleted student:", student_id)
+
+        # Delete from dataset folder if roll_no found
+        if roll_no:
+            dataset_path = os.path.join(BASE_DIR, config.DATASET_PATH)
+            if os.path.exists(dataset_path):
+                for file_name in os.listdir(dataset_path):
+                    if file_name.startswith(f"{roll_no}_"):
+                        os.remove(os.path.join(dataset_path, file_name))
         
-        # We don't automatically regenerate encodings here for speed,
-        # but the admin can click "Generate Encodings" in the UI later or 
-        # the system will just ignore unknown faces. 
-        # Actually, let's regenerate it in the background if CV is available
+        # Regenerate encodings in background
         if CV_AVAILABLE:
             threading.Thread(target=regenerate_encodings_bg).start()
 
-        return jsonify({"status": "ok", "message": f"Student {roll_no} deleted."})
+        return jsonify({"status": "ok", "message": f"Student {student_id} deleted."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
     finally:

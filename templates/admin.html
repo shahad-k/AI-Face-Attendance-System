@@ -511,7 +511,7 @@
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${escapeHtml(s.roll_no)}', '${escapeHtml(s.name)}')">
+                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${escapeHtml(s.student_id)}', '${escapeHtml(s.name)}')">
                             🗑️ Delete
                         </button>
                     </td>
@@ -519,12 +519,12 @@
             `).join('');
         }
 
-        async function deleteStudent(rollNo, name) {
-            if (!confirm(`Are you sure you want to permanently delete student ${name} (Roll No: ${rollNo})?\n\nThis will remove their profile and all saved face photos.`)) {
+        async function deleteStudent(studentId, name) {
+            if (!confirm(`Are you sure you want to permanently delete student ${name} (ID: ${studentId})?\n\nThis will remove their profile and all saved face photos.`)) {
                 return;
             }
             try {
-                const res = await fetch(`/api/student/${encodeURIComponent(rollNo)}/delete`, { method: 'POST' });
+                const res = await fetch(`/api/student/${encodeURIComponent(studentId)}/delete`, { method: 'POST' });
                 const result = await res.json();
                 if (result.status === 'ok') {
                     alert(result.message);
