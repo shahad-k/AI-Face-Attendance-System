@@ -141,16 +141,16 @@ def init_db():
         date TEXT NOT NULL
     )''')
     
-    # Migrate initial data from config.py if tables are empty
-    cursor.execute("SELECT COUNT(*) as cnt FROM classes")
-    if cursor.fetchone()["cnt"] == 0:
-        for cls, pin in config.TEACHER_PINS.items():
-            cursor.execute("INSERT INTO classes (class_name, passcode, mentor_name) VALUES (?, ?, ?)", (cls, pin, ""))
-            
+
     cursor.execute("SELECT COUNT(*) as cnt FROM settings")
     if cursor.fetchone()["cnt"] == 0:
         cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", config.ADMIN_PASSWORD))
         
+    # Force delete ghost student record if exists (Clean up database on startup)
+    cursor.execute("DELETE FROM attendance WHERE student_id = '__check__'")
+    cursor.execute("DELETE FROM birthday_wishes WHERE student_id = '__check__'")
+    cursor.execute("DELETE FROM students WHERE student_id = '__check__'")
+    
     conn.commit()
     conn.close()
 
@@ -502,6 +502,11 @@ def api_add_student_manual():
     if not student_id or not name or not roll_no or not class_name:
         return jsonify({"status": "error", "message": "Required fields are missing."})
         
+    # Prevent creating students with names/IDs like check or test
+    invalid_keywords = ["check", "test", "__check__"]
+    if any(keyword in student_id.lower() or keyword in name.lower() or keyword in roll_no.lower() for keyword in invalid_keywords):
+        return jsonify({"status": "error", "message": "Invalid values: 'check' or 'test' are not allowed."})
+        
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -731,6 +736,12 @@ def api_register():
     
 
     student_id = data.get("student_id", "").strip()
+    
+    # 1. REMOVE AUTO-INSERT LOGIC (Check-only mode for password validation)
+    if student_id == "__check__":
+        conn.close()
+        return jsonify({"status": "ok", "message": "Admin password verified."})
+
     name = data.get("name", "").strip()
     roll_no = data.get("roll_no", "").strip()
     student_class = data.get("class", "").strip()
@@ -740,6 +751,12 @@ def api_register():
 
     if not all([student_id, name, roll_no, student_class]):
         return jsonify({"status": "error", "message": "Student ID, Name, Roll No, and Class are required."})
+
+    # Validation Rule: Prevent dummy registrations
+    invalid_keywords = ["check", "test", "__check__"]
+    if any(keyword in student_id.lower() or keyword in name.lower() or keyword in roll_no.lower() for keyword in invalid_keywords):
+        conn.close()
+        return jsonify({"status": "error", "message": "Invalid values: 'check' or 'test' are not allowed."})
 
     conn = get_db()
     cursor = conn.cursor()
