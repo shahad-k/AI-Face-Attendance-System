@@ -6,4 +6,4 @@ cmake
 dlib
 bcrypt
 pyinstaller
-setuptools
+setuptools<81
