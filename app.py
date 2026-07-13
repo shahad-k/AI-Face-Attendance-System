@@ -624,6 +624,7 @@ def regenerate_encodings_bg():
 def api_recognize():
     """Receives a webcam frame (base64), runs face recognition, marks attendance."""
     if not CV_AVAILABLE:
+        print("[DEBUG] Face recognition API call failed: CV/AI libraries not available.")
         return jsonify({"status": "error", "message": "Face recognition libraries not installed."})
 
     data = request.json
@@ -639,9 +640,10 @@ def api_recognize():
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         if frame is None:
+            print("[DEBUG] Frame decoding failed: Invalid image data.")
             return jsonify({"status": "error", "message": "Invalid image data."})
 
-        # Resize for speed (same as desktop app)
+        # Resize for speed
         small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
         rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
@@ -650,22 +652,35 @@ def api_recognize():
         if not face_locations:
             return jsonify({"status": "no_face"})
 
+        print(f"[DEBUG] Face detected at location(s): {face_locations}")
+
         face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
         if not face_encodings:
+            print("[DEBUG] Face detected, but failed to generate face encoding vectors.")
             return jsonify({"status": "no_face"})
 
         with encodings_lock:
-            if not known_data["encodings"]:
+            encodings_count = len(known_data["encodings"])
+            print(f"[DEBUG] Known face encodings loaded: {encodings_count}")
+            if encodings_count == 0:
+                print("[DEBUG] Matching failed: Encodings list is empty.")
                 return jsonify({"status": "no_encodings", "message": "No students registered yet."})
 
             for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
-                matches = face_recognition.compare_faces(known_data["encodings"], face_encoding, tolerance=0.5)
+                # Compute face distances to find the best match
+                distances = face_recognition.face_distance(known_data["encodings"], face_encoding)
+                best_match_idx = np.argmin(distances)
+                min_distance = distances[best_match_idx]
+                roll_no = known_data["roll_nos"][best_match_idx]
 
-                if True not in matches:
+                print(f"[DEBUG] Computed face distances: Minimum distance is {min_distance:.4f} for Roll No: {roll_no}")
+
+                # Use standard 0.6 distance threshold (recommended default for face_recognition)
+                if min_distance > 0.6:
+                    print(f"[DEBUG] Match failed: Min distance {min_distance:.4f} exceeds threshold limit of 0.6.")
                     continue
 
-                matched_idx = matches.index(True)
-                roll_no = known_data["roll_nos"][matched_idx]
+                print(f"[DEBUG] Match FOUND: Roll No: {roll_no} (distance: {min_distance:.4f})")
 
                 # Look up student in DB
                 conn = get_db()
@@ -674,6 +689,7 @@ def api_recognize():
                 student = cursor.fetchone()
 
                 if not student:
+                    print(f"[DEBUG] Database lookup failed: Roll No '{roll_no}' has encodings but no database profile.")
                     conn.close()
                     return jsonify({"status": "unknown", "message": f"Roll No '{roll_no}' not in database."})
 
@@ -684,8 +700,11 @@ def api_recognize():
                 student_age = student["age"]
                 dob = student["dob"]
 
+                print(f"[DEBUG] Identified Student: {name} | Class: {student_class} | ID: {student_id}")
+
                 # CLASS GATEKEEPER
                 if current_class != "All Classes" and student_class != current_class:
+                    print(f"[DEBUG] Class Gatekeeper: Student '{name}' ({student_class}) blocked from session '{current_class}'.")
                     conn.close()
                     return jsonify({
                         "status": "wrong_class", "name": name, "class": student_class, "roll_no": roll_no,
@@ -697,8 +716,10 @@ def api_recognize():
                 date_str = now.strftime("%d-%m-%Y")
                 time_str = now.strftime("%H:%M:%S")
                 
-                cursor.execute("SELECT 1 FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
-                if cursor.fetchone():
+                cursor.execute("SELECT time FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
+                existing_attendance = cursor.fetchone()
+                if existing_attendance:
+                    print(f"[DEBUG] Duplicate Blocked: Attendance already marked for {name} today at {existing_attendance['time']}.")
                     conn.close()
                     if gender == "FEMALE":
                         msg = "My lady... you already marked your presence."
@@ -709,22 +730,28 @@ def api_recognize():
                         "roll_no": roll_no, "gender": gender, "message": msg
                     })
 
-                # SMILE DETECTION
-                top4, right4, bottom4, left4 = top * 4, right * 4, bottom * 4, left * 4
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                top4, bottom4 = max(0, top4), min(gray.shape[0], bottom4)
-                left4, right4 = max(0, left4), min(gray.shape[1], right4)
-                face_roi = gray[top4:bottom4, left4:right4]
+                # SMILE DETECTION (Safe wrapper)
                 is_smiling = "No"
-                if face_roi.shape[0] > 0 and face_roi.shape[1] > 0:
-                    smiles = smile_cascade.detectMultiScale(face_roi, scaleFactor=1.8, minNeighbors=20)
-                    if len(smiles) > 0:
-                        is_smiling = "Yes"
+                try:
+                    if 'smile_cascade' in globals() and not smile_cascade.empty():
+                        top4, right4, bottom4, left4 = top * 4, right * 4, bottom * 4, left * 4
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        top4, bottom4 = max(0, top4), min(gray.shape[0], bottom4)
+                        left4, right4 = max(0, left4), min(gray.shape[1], right4)
+                        face_roi = gray[top4:bottom4, left4:right4]
+                        if face_roi.shape[0] > 0 and face_roi.shape[1] > 0:
+                            smiles = smile_cascade.detectMultiScale(face_roi, scaleFactor=1.8, minNeighbors=20)
+                            if len(smiles) > 0:
+                                is_smiling = "Yes"
+                except Exception as smile_err:
+                    print(f"[DEBUG] Smile detection failed: {smile_err}")
 
                 # MARK ATTENDANCE
+                print(f"[DEBUG] Triggering attendance marking function for: {name}...")
                 cursor.execute("INSERT INTO attendance (student_id, date, time, smiled) VALUES (?, ?, ?, ?)",
                                (student_id, date_str, time_str, is_smiling))
                 conn.commit()
+                print(f"[DEBUG] Attendance successfully saved in database for: {name} (Time: {time_str})")
 
                 # BIRTHDAY CHECK (Saves birthday wishes dynamically)
                 is_birthday = False
@@ -735,18 +762,21 @@ def api_recognize():
                         is_birthday = True
                         cursor.execute("INSERT OR REPLACE INTO birthday_wishes (student_id, date) VALUES (?, ?)", (student_id, date_str))
                         conn.commit()
+                        print(f"[DEBUG] Birthday birthday logs stored for celebrating: {name}")
 
                 conn.close()
                 return jsonify({
                     "status": "marked", "name": name, "class": student_class, "roll_no": roll_no,
                     "gender": gender, "age": student_age, "smiled": is_smiling,
                     "time": time_str, "is_birthday": is_birthday,
-                    "message": "Attendance Marked Successfully!"
+                    "message": f"Attendance Marked: {name}"
                 })
 
+        print("[DEBUG] Match failed: None of the detected faces match any registered student.")
         return jsonify({"status": "unknown", "message": "Face not recognized."})
 
     except Exception as e:
+        print(f"[DEBUG] Error encountered in recognition route: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 
