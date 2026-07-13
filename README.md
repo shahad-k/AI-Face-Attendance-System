@@ -71,21 +71,31 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 📦 How to Build/Compile as a Standalone App (.exe)
 *Converts the project into a double-clickable desktop application.*
 
-> **Pre-requisite:** Ensure you have completed the **Setup Guide** above first to create your `.venv` environment and install all dependency packages!
-
 1. Open **Command Prompt (CMD)** inside the project folder.
 
-2. Activate the virtual environment:
+2. Create the virtual environment folder:
+   ```bash
+   python -m venv .venv
+   ```
+   *(Wait 10-15 seconds for the command to finish).*
+
+3. Activate the virtual environment:
    ```bash
    .venv\Scripts\activate
    ```
+   *(You will see `(.venv)` appear at the beginning of your terminal line).*
 
-3. Compile the application using the spec configuration:
+4. Install all packages (includes PyInstaller and bcrypt):
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Compile the application using the spec configuration:
    ```bash
    pyinstaller AIAttendanceSystem.spec --noconfirm
    ```
 
-4. Automatically generate the Desktop Shortcut pointing to your new app:
+6. Automatically generate the Desktop Shortcut pointing to your new app:
    ```bash
    powershell -Command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AI Attendance Pro.lnk')); $s.TargetPath = '%CD%\dist\AIAttendanceSystem.exe'; $s.IconLocation = '%CD%\static\favicon.ico'; $s.Save()"
    ```
