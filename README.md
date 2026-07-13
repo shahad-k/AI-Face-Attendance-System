@@ -103,8 +103,6 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 
 ---
 
----
-
 ## 🔑 Admin Panel Access
 
 Manage classes, view analytics sheets, register faces, and configure credentials using these default credentials:
