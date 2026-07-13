@@ -71,26 +71,27 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 📦 How to Build/Compile as a Standalone App (.exe)
 *Converts the project into a double-clickable desktop application.*
 
-Open **Command Prompt (CMD)** in the project folder and copy-paste these commands to create your environment, install libraries, compile the app, and generate the shortcut:
+> **Pre-requisite:** Ensure you have completed the **Setup Guide** above first to create your `.venv` environment and install all dependency packages!
 
-```bash
-# 1. Create the virtual environment folder
-python -m venv .venv
+1. Open **Command Prompt (CMD)** inside the project folder.
 
-# 2. Activate the virtual environment
-.venv\Scripts\activate
+2. Activate the virtual environment:
+   ```bash
+   .venv\Scripts\activate
+   ```
 
-# 3. Install all packages (includes PyInstaller and bcrypt)
-pip install -r requirements.txt
+3. Compile the application using the spec configuration:
+   ```bash
+   pyinstaller AIAttendanceSystem.spec --noconfirm
+   ```
 
-# 4. Compile the code into a standalone executable (saved in dist/ folder)
-pyinstaller AIAttendanceSystem.spec --noconfirm
+4. Automatically generate the Desktop Shortcut pointing to your new app:
+   ```bash
+   powershell -Command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AI Attendance Pro.lnk')); $s.TargetPath = '%CD%\dist\AIAttendanceSystem.exe'; $s.IconLocation = '%CD%\static\favicon.ico'; $s.Save()"
+   ```
+   *(A shortcut named **"AI Attendance Pro"** has been automatically created on your Desktop!)*
 
-# 5. Automatically generate the Desktop Shortcut pointing to your new app
-powershell -Command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AI Attendance Pro.lnk')); $s.TargetPath = '%CD%\dist\AIAttendanceSystem.exe'; $s.IconLocation = '%CD%\static\favicon.ico'; $s.Save()"
-```
-
-*Once completed, look at your Desktop! A shortcut named **"AI Attendance Pro"** has been automatically created, allowing you to launch the app instantly.*
+---
 
 ---
 
