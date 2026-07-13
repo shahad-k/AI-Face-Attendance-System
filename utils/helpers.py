@@ -6,7 +6,11 @@ from datetime import datetime
 from utils import config
 
 # --- Resolve all paths relative to the project root ---
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import sys
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def check_and_update_birthdays():
     """

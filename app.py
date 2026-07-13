@@ -41,9 +41,16 @@ except (ImportError, SystemExit, Exception):
     CV_AVAILABLE = False
 
 # --- PATH SETUP ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import sys
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    TEMPLATE_DIR = os.path.join(sys._MEIPASS, "templates")
+    STATIC_DIR = os.path.join(sys._MEIPASS, "static")
+    app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    app = Flask(__name__)
 
-app = Flask(__name__)
 app.secret_key = "attendance-ai-flask-secret-key-2024"
 
 # --- FACE ENCODINGS CACHE ---

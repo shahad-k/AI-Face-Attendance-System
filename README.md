@@ -196,8 +196,69 @@ Contributions are welcome! Please fork the repository and submit a pull request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## 📦 Standalone Windows Executable (.exe)
+
+This application can be compiled into a single, standalone Windows `.exe` that runs on any PC without requiring Python, Git, or manual package installations!
+
+### Default Admin Credentials
+- **Access URL:** `/admin` (or click "Admin Portal" from the home page)
+- **Master Admin Password:** `admin` (You can change this password securely inside the admin panel under Settings).
+
+---
+
+### 🔨 How to Build the Executable
+
+Follow these steps to compile the project into a standalone executable:
+
+1. **Activate the Virtual Environment & Install PyInstaller:**
+   ```bash
+   .venv\Scripts\activate
+   pip install pyinstaller
+   ```
+2. **Compile the App using the Spec File:**
+   ```bash
+   .venv\Scripts\pyinstaller AIAttendanceSystem.spec
+   ```
+   *This compiles the application using the custom configurations inside `AIAttendanceSystem.spec` (hiding the console window, bundling templates, static files, and `face_recognition` shape models).*
+3. **Get your Executable:**
+   Once compilation is complete, find your standalone executable `AIAttendanceSystem.exe` inside the newly created `dist/` directory!
+
+---
+
+### 💻 How to Run & Test on Another PC
+
+1. Copy the `AIAttendanceSystem.exe` from the `dist/` directory to the target Windows PC (e.g. via USB flash drive).
+2. Double-click the `.exe` to launch it.
+3. A sleek slate-themed **Control Panel** window will open in the background, and your default web browser will automatically load the local attendance portal at `http://127.0.0.1:5000/`.
+4. When finished, simply click **"Shutdown Server"** in the Control Panel window to close the background server cleanly.
+
+---
+
+### 🛠️ Troubleshooting & Known Errors
+
+If you encounter installation issues (especially during clean manual setups), check these solutions:
+
+#### 1. `ERROR: Failed building wheel for dlib`
+**Why it happens:** Installing `dlib` from scratch on Windows requires C++ compilers (like CMake and Visual C++ Build Tools).
+**The Fix:** Use a precompiled dlib binary wheel for Python 3.10 instead of building it from source:
+```bash
+pip install https://github.com/z-mahmud22/Dlib_Windows_Python3.x/raw/main/dlib-19.22.99-cp310-cp310-win_amd64.whl
+```
+
+#### 2. `ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE`
+**Why it happens:** Cached package files on your PC have corrupted or modified checksum hashes.
+**The Fix:** Clear your pip download cache and force a clean reinstall:
+```bash
+pip install --no-cache-dir -r requirements.txt
+```
+
+#### 3. Executable immediately crashes on start on another PC
+**Why it happens:** Some Windows PCs lack runtime Visual C++ Redistributable packages.
+**The Fix:** Install the standard [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) package on the target PC (which contains the required C++ runtimes for `dlib` and `opencv`).
+
 ---
 
 ## 📄 License
 
 Released under the **MIT License**. Feel free to use, modify, and distribute this software for educational or commercial purposes.
+
