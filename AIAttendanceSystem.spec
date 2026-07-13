@@ -22,8 +22,6 @@ a = Analysis(
         'numpy',
         'PIL',
         'PIL.Image',
-        'customtkinter',
-        'darkdetect',
     ],
     hookspath=[],
     hooksconfig={},

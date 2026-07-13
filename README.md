@@ -92,7 +92,7 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 
 5. Compile the application using the spec configuration:
    ```bash
-   pyinstaller AIAttendanceSystem.spec --noconfirm
+   python -m PyInstaller AIAttendanceSystem.spec --noconfirm
    ```
 
 6. Automatically generate the Desktop Shortcut pointing to your new app:
