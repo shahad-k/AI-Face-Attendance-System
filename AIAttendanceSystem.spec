@@ -22,6 +22,8 @@ a = Analysis(
         'numpy',
         'PIL',
         'PIL.Image',
+        'pkg_resources',
+        'face_recognition_models',
     ],
     hookspath=[],
     hooksconfig={},
