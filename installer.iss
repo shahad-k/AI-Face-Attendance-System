@@ -12,9 +12,12 @@ AppId={{C1F032B2-D46C-4521-831C-6FF2E9CDFA82}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName=C:\AI Attendance Pro
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+
+[Dirs]
+Name: "{app}"; Permissions: users-full
 
 ; Setup aesthetics (minimal & modern layout)
 WizardStyle=modern
@@ -30,9 +33,6 @@ OutputBaseFilename=AIAttendanceSetup
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-
 [Files]
 Source: "dist\AIAttendanceSystem.exe"; DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion
 Source: "static\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -40,7 +40,7 @@ Source: "static\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\favicon.ico"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstdev}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\favicon.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\favicon.ico"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent

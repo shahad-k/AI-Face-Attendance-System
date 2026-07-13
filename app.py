@@ -9,7 +9,7 @@ import sys
 import io as _io
 
 # --- Fix Windows console encoding for emoji/unicode ---
-if sys.stdout.encoding != 'utf-8':
+if sys.stdout is not None and sys.stdout.encoding != 'utf-8':
     sys.stdout = _io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = _io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
@@ -165,8 +165,14 @@ def init_db():
 
     cursor.execute("SELECT COUNT(*) as cnt FROM settings")
     if cursor.fetchone()["cnt"] == 0:
-        hashed_default_pwd = hash_password("admin123")
+        hashed_default_pwd = hash_password("admin")
         cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", hashed_default_pwd))
+    else:
+        # Migrate existing password from 'admin123' to 'admin' if found
+        cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
+        row = cursor.fetchone()
+        if row and check_password("admin123", row["value"]):
+            cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_password'", (hash_password("admin"),))
         
     # Force delete ghost student record if exists (Clean up database on startup)
     cursor.execute("DELETE FROM attendance WHERE student_id = '__check__'")

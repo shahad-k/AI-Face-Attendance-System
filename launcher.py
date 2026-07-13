@@ -2,7 +2,7 @@ import sys
 import os
 import threading
 import webbrowser
-import time
+import subprocess
 import tkinter as tk
 from tkinter import messagebox
 
@@ -12,9 +12,24 @@ if getattr(sys, 'frozen', False):
 
 from app import app, init_db
 
+def kill_port_5000():
+    """Kills any active process on port 5000 to prevent server conflicts (Windows only)."""
+    try:
+        output = subprocess.check_output("netstat -ano | findstr :5000", shell=True).decode()
+        for line in output.strip().split('\n'):
+            parts = [p for p in line.strip().split(' ') if p]
+            if len(parts) >= 5 and parts[1].endswith(':5000'):
+                pid = parts[-1]
+                # Force kill the ghost process
+                subprocess.run(f"taskkill /PID {pid} /F", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
 def run_flask():
     """Runs the Flask web server."""
     try:
+        # Guarantee port 5000 is clean on boot
+        kill_port_5000()
         init_db()
         # Run Flask server locally on port 5000 (debug=False, use_reloader=False)
         app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
@@ -23,22 +38,29 @@ def run_flask():
         sys.exit(1)
 
 def open_browser():
-    """Opens the local attendance portal in the default browser."""
+    """Opens the local attendance portal in the default browser and minimizes the panel."""
     webbrowser.open("http://127.0.0.1:5000/")
+    
+    # Disable the launch button and change text to prevent multiple browser launches
+    open_btn.config(state=tk.DISABLED, text="🌐 Portal Opened (Active)", bg="#334155")
+    
+    # Minimize the launcher GUI out of the way
+    root.iconify()
 
 def on_closing():
-    """Confirms shutdown of the application."""
+    """Confirms shutdown of the application and cleanly kills the port."""
     if messagebox.askokcancel("Quit", "Do you want to stop the AI Attendance server and exit?"):
+        kill_port_5000() # Clean up port 5000 completely
         root.destroy()
-        os._exit(0)  # Use os._exit to kill all daemon threads immediately
+        os._exit(0)  # Kill all daemon threads immediately
 
 if __name__ == "__main__":
+    # Clean port 5000 before boot thread starts
+    kill_port_5000()
+
     # Start the Flask web server in a daemon thread
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-
-    # Automatically open the browser after a short delay
-    threading.Timer(1.5, open_browser).start()
 
     # Create UI for the Server Control Panel
     root = tk.Tk()
