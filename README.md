@@ -42,11 +42,26 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
    ```bash
    cd AI-Face-Attendance-System-main
    ```
-2. Create the virtual environment and install all required libraries (this takes about 1–2 minutes):
+   *(If you downloaded the ZIP, you may need to run `cd AI-Face-Attendance-System-main` twice to enter the inner folder).*
+
+2. Create the virtual environment folder:
    ```bash
-   python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+   python -m venv .venv
    ```
-3. Start the application server:
+   *(Wait 10-15 seconds for the command to finish).*
+
+3. Activate the virtual environment:
+   ```bash
+   .venv\Scripts\activate
+   ```
+   *(You will see `(.venv)` appear at the beginning of your terminal line).*
+
+4. Install all required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Start the application server:
    ```bash
    python run.py
    ```
@@ -56,27 +71,26 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 📦 How to Build/Compile as a Standalone App (.exe)
 *Converts the project into a double-clickable desktop application.*
 
-> **Pre-requisite:** Ensure you have completed **Step 2** of the run guide above first to create the virtual environment and install all dependency packages!
+Open **Command Prompt (CMD)** in the project folder and copy-paste these commands to create your environment, install libraries, compile the app, and generate the shortcut:
 
-1. Open **Command Prompt (CMD)** inside the project folder.
-2. Activate the virtual environment:
-   ```bash
-   .venv\Scripts\activate
-   ```
-3. Compile the application using the spec configuration:
-   ```bash
-   pyinstaller AIAttendanceSystem.spec --noconfirm
-   ```
-4. **Get your App:** Open the newly created `dist/` directory and run **`AIAttendanceSystem.exe`**! You can copy this file to any Windows PC to run the app without needing Python.
+```bash
+# 1. Create the virtual environment folder
+python -m venv .venv
 
----
+# 2. Activate the virtual environment
+.venv\Scripts\activate
 
-## 🚀 How to Run (Standalone EXE)
+# 3. Install all packages (includes PyInstaller and bcrypt)
+pip install -r requirements.txt
 
-1. Double-click **`AIAttendanceSystem.exe`** (or use your desktop shortcut).
-2. The **Control Panel** launcher window will boot, showing a green running status indicator.
-3. Click **🌐 Open Attendance Web App** to open the portal in your default browser.
-4. When finished, simply click **🚪 Shutdown Server** or close the launcher window. The server will terminate completely, and no background processes will stay running.
+# 4. Compile the code into a standalone executable (saved in dist/ folder)
+pyinstaller AIAttendanceSystem.spec --noconfirm
+
+# 5. Automatically generate the Desktop Shortcut pointing to your new app
+powershell -Command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AI Attendance Pro.lnk')); $s.TargetPath = '%CD%\dist\AIAttendanceSystem.exe'; $s.IconLocation = '%CD%\static\favicon.ico'; $s.Save()"
+```
+
+*Once completed, look at your Desktop! A shortcut named **"AI Attendance Pro"** has been automatically created, allowing you to launch the app instantly.*
 
 ---
 
