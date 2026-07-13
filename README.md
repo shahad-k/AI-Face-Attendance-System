@@ -52,12 +52,12 @@ git clone https://github.com/yourusername/attendance-ai.git
 ```
 *If you downloaded the ZIP file instead, extract the folder to your computer.*
 
-### Step 2: Open Terminal & Install Dependencies
+### Step 2: Create Environment & Install Dependencies
 1. Open the `attendance-ai` folder you just downloaded.
 2. **Windows Trick:** Click the folder's address bar at the very top, delete the text, type `cmd`, and hit **Enter**. This instantly opens a black terminal window in the right place!
-3. Paste this command to install the required AI libraries:
+3. Paste this command to create a virtual environment and install all dependencies (including PyInstaller and security packages) at once:
 ```bash
-pip install -r requirements.txt
+python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
 ```
 
 ### Step 3: Launch the System!
@@ -210,18 +210,17 @@ This application can be compiled into a single, standalone Windows `.exe` that r
 
 Follow these steps to compile the project into a standalone executable:
 
-1. **Activate the Virtual Environment & Install PyInstaller:**
+1. **Activate the Virtual Environment:**
    ```bash
    .venv\Scripts\activate
-   pip install pyinstaller
    ```
 2. **Compile the App using the Spec File:**
    ```bash
-   .venv\Scripts\pyinstaller AIAttendanceSystem.spec
+   .venv\Scripts\pyinstaller AIAttendanceSystem.spec --noconfirm
    ```
    *This compiles the application using the custom configurations inside `AIAttendanceSystem.spec` (hiding the console window, bundling templates, static files, and `face_recognition` shape models).*
 3. **Get your Executable:**
-   Once compilation is complete, find your standalone executable `AIAttendanceSystem.exe` inside the newly created `dist/` directory!
+   Once compilation is complete, find your standalone executable `AIAttendanceSystem.exe` inside the `dist/` directory!
 
 ---
 
