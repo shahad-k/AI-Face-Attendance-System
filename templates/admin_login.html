@@ -24,6 +24,12 @@
 
             <form action="{{ url_for('admin_do_login') }}" method="POST">
                 <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" name="username" id="username"
+                           placeholder="Enter admin username" required autocomplete="off" value="admin">
+                </div>
+
+                <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" name="password" id="password"
                            placeholder="Enter admin password" required autocomplete="off">
@@ -39,8 +45,10 @@
                    style="color: var(--text-muted); font-size: 13px; text-decoration: none;">
                     ← Back to Teacher Login
                 </a>
-            </div>
         </div>
+        <footer style="text-align: center; margin-top: 25px; font-size: 11px; color: var(--text-muted); opacity: 0.6;">
+            Version 1.0 | © Shahad K
+        </footer>
     </div>
 </body>
 </html>

@@ -42,8 +42,8 @@ if __name__ == "__main__":
 
     # Create UI for the Server Control Panel
     root = tk.Tk()
-    root.title("AI Attendance Server Panel")
-    root.geometry("400x220")
+    root.title("AI Attendance Pro — Launcher")
+    root.geometry("420x310")
     root.configure(bg="#0f172a") # Slate-900 background
     root.resizable(False, False)
 
@@ -54,25 +54,54 @@ if __name__ == "__main__":
     except Exception:
         pass
 
-    # Styling Elements
+    # Load and display logo in the GUI
+    try:
+        from PIL import Image, ImageTk
+        logo_path = "static/logo.jpg"
+        if getattr(sys, 'frozen', False):
+            logo_path = os.path.join(sys._MEIPASS, "static/logo.jpg")
+            
+        if os.path.exists(logo_path):
+            img = Image.open(logo_path)
+            img = img.resize((70, 70), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(img)
+            logo_label = tk.Label(root, image=photo, bg="#0f172a")
+            logo_label.image = photo # keep reference
+            logo_label.pack(pady=(15, 0))
+    except Exception as e:
+        print("Logo loading failed:", e)
+
+    # Title Container
+    title_frame = tk.Frame(root, bg="#0f172a")
+    title_frame.pack(pady=(10, 5))
+
     title_label = tk.Label(
-        root, 
-        text="🧠 AI Attendance System", 
-        font=("Helvetica", 16, "bold"), 
+        title_frame, 
+        text="🧠 AI Attendance Pro", 
+        font=("Helvetica", 15, "bold"), 
         fg="#38bdf8", # Sky blue
         bg="#0f172a"
     )
-    title_label.pack(pady=20)
+    title_label.pack()
+
+    # Status indicator container (shows running state with green dot)
+    status_frame = tk.Frame(root, bg="#0f172a")
+    status_frame.pack(pady=3)
+
+    status_dot = tk.Canvas(status_frame, width=10, height=10, bg="#0f172a", highlightthickness=0)
+    status_dot.create_oval(1, 1, 9, 9, fill="#22c55e", outline="#86efac") # Green indicator dot
+    status_dot.pack(side=tk.LEFT, padx=(0, 6))
 
     status_label = tk.Label(
-        root, 
-        text="Status: Server is running on http://127.0.0.1:5000", 
-        font=("Helvetica", 10), 
+        status_frame, 
+        text="Status: Server is running on port 5000", 
+        font=("Helvetica", 9), 
         fg="#94a3b8", # Muted slate
         bg="#0f172a"
     )
-    status_label.pack(pady=5)
+    status_label.pack(side=tk.LEFT)
 
+    # Launch portal Button
     open_btn = tk.Button(
         root, 
         text="🌐 Open Attendance Web App", 
@@ -82,13 +111,14 @@ if __name__ == "__main__":
         activebackground="#0369a1", 
         activeforeground="#ffffff", 
         borderwidth=0, 
-        padx=15, 
-        pady=8, 
+        padx=18, 
+        pady=7, 
         cursor="hand2",
         command=open_browser
     )
-    open_btn.pack(pady=10)
+    open_btn.pack(pady=8)
 
+    # Shutdown Server Button
     stop_btn = tk.Button(
         root, 
         text="🚪 Shutdown Server", 
@@ -98,12 +128,22 @@ if __name__ == "__main__":
         activebackground="#b91c1c", 
         activeforeground="#ffffff", 
         borderwidth=0, 
-        padx=10, 
+        padx=12, 
         pady=4, 
         cursor="hand2",
         command=on_closing
     )
-    stop_btn.pack(pady=5)
+    stop_btn.pack(pady=3)
+
+    # Low-contrast Copyright Footer
+    footer_label = tk.Label(
+        root, 
+        text="AI Attendance Pro v1.0 | © Shahad K", 
+        font=("Helvetica", 8), 
+        fg="#475569", # Slate-600 (very subtle)
+        bg="#0f172a"
+    )
+    footer_label.pack(side=tk.BOTTOM, pady=8)
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()

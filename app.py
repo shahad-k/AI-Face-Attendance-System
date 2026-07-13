@@ -25,7 +25,21 @@ import base64
 import pickle
 import threading
 from datetime import datetime
+import bcrypt
 from functools import wraps
+
+def hash_password(password: str) -> str:
+    """Hashes a password string using bcrypt."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def check_password(password: str, hashed_password: str) -> bool:
+    """Verifies a password against its bcrypt hash."""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 # --- IMPORT PROJECT CONFIG ---
 from utils import config
@@ -151,7 +165,8 @@ def init_db():
 
     cursor.execute("SELECT COUNT(*) as cnt FROM settings")
     if cursor.fetchone()["cnt"] == 0:
-        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", config.ADMIN_PASSWORD))
+        hashed_default_pwd = hash_password("admin123")
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", hashed_default_pwd))
         
     # Force delete ghost student record if exists (Clean up database on startup)
     cursor.execute("DELETE FROM attendance WHERE student_id = '__check__'")
@@ -280,16 +295,21 @@ def admin_login_page():
 
 @app.route("/admin/login", methods=["POST"])
 def admin_do_login():
+    username = request.form.get("username")
     password = request.form.get("password")
+    
+    if username != "admin":
+        return render_template("admin_login.html", error="Incorrect Username!")
+        
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
     row = cursor.fetchone()
     conn.close()
     
-    correct_password = row["value"] if row else config.ADMIN_PASSWORD
+    hashed_password = row["value"] if row else None
     
-    if password == correct_password:
+    if hashed_password and check_password(password, hashed_password):
         session["admin"] = True
         return redirect(url_for("admin_panel"))
     return render_template("admin_login.html", error="Incorrect Password!")
@@ -551,11 +571,14 @@ def api_change_password():
     cursor = conn.cursor()
     cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
     row = cursor.fetchone()
-    correct_password = row["value"] if row else config.ADMIN_PASSWORD
-    if current_password != correct_password:
+    hashed_password = row["value"] if row else None
+    
+    if not hashed_password or not check_password(current_password, hashed_password):
         conn.close()
         return jsonify({"status": "error", "message": "Incorrect current password"})
-    cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_password'", (new_password,))
+        
+    hashed_new_password = hash_password(new_password)
+    cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_password'", (hashed_new_password,))
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "message": "Admin password updated successfully"})
@@ -736,8 +759,8 @@ def api_register():
     cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
     row = cursor.fetchone()
     
-    correct_password = row["value"] if row else config.ADMIN_PASSWORD
-    if password != correct_password:
+    hashed_password = row["value"] if row else None
+    if not hashed_password or not check_password(password, hashed_password):
         conn.close()
         return jsonify({"status": "error", "message": "Incorrect Admin Master Password!"})
     
