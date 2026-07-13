@@ -38,11 +38,11 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 🚀 How to Open and Run via Command Prompt (CMD)
 *Runs the project directly from the source code using Python.*
 
-1. Open **Command Prompt (CMD)** and navigate to the project folder:
+1. Open **Command Prompt (CMD)** and navigate to the project folder (for downloaded ZIPs, the folder name ends in `-main`):
    ```bash
-   cd AI-Face-Attendance-System
+   cd AI-Face-Attendance-System-main
    ```
-2. Create a virtual environment and install all required libraries:
+2. Create the virtual environment and install all required libraries (this takes about 1–2 minutes):
    ```bash
    python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
    ```
@@ -55,6 +55,8 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 
 ### 📦 How to Build/Compile as a Standalone App (.exe)
 *Converts the project into a double-clickable desktop application.*
+
+> **Pre-requisite:** Ensure you have completed **Step 2** of the run guide above first to create the virtual environment and install all dependency packages!
 
 1. Open **Command Prompt (CMD)** inside the project folder.
 2. Activate the virtual environment:
