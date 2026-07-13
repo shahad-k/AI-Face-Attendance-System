@@ -29,25 +29,43 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 
 ---
 
-## 💾 Installation Guide
+## 💾 Setup & Installation Guide
 
-### Option 1: Using the Setup Installer (Recommended for Production)
-The simplest way to install the application on any Windows computer:
-1. Double-click the installer executable: **`AIAttendanceSetup.exe`**.
-2. The installation wizard will guide you through directory setup and clean uninstallation configurations.
-3. The app installs cleanly into **`C:\AI Attendance Pro`** with all write privileges fully configured (no administrator permissions required!).
-4. Launch the app directly from your **Desktop Shortcut** or **Start Menu**!
+> **Note:** The compiled `dist/` executable and `.venv/` folders are hidden and ignored by GitHub Desktop (via `.gitignore`) to keep the codebase small and clean. Follow the instructions below to run or compile the project on your machine.
 
-### Option 2: Running from Source Code (For Developers)
-1. Clone or extract the project files to your local folder.
-2. Open terminal in the directory and run the one-command virtual environment installer:
+---
+
+### 🚀 How to Open and Run via Command Prompt (CMD)
+*Runs the project directly from the source code using Python.*
+
+1. Open **Command Prompt (CMD)** and navigate to the project folder:
+   ```bash
+   cd AI-Face-Attendance-System
+   ```
+2. Create a virtual environment and install all required libraries:
    ```bash
    python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
    ```
-3. Run the startup launcher:
+3. Start the application server:
    ```bash
    python run.py
    ```
+
+---
+
+### 📦 How to Build/Compile as a Standalone App (.exe)
+*Converts the project into a double-clickable desktop application.*
+
+1. Open **Command Prompt (CMD)** inside the project folder.
+2. Activate the virtual environment:
+   ```bash
+   .venv\Scripts\activate
+   ```
+3. Compile the application using the spec configuration:
+   ```bash
+   pyinstaller AIAttendanceSystem.spec --noconfirm
+   ```
+4. **Get your App:** Open the newly created `dist/` directory and run **`AIAttendanceSystem.exe`**! You can copy this file to any Windows PC to run the app without needing Python.
 
 ---
 
