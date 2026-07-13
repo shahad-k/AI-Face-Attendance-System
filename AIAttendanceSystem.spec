@@ -1,7 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
+
+# Dynamically collect data files for face_recognition_models to ensure portability
+collected_face_models = collect_data_files('face_recognition_models')
 
 a = Analysis(
     ['launcher.py'],
@@ -10,8 +14,7 @@ a = Analysis(
     datas=[
         ('templates', 'templates'),
         ('static', 'static'),
-        ('.venv/Lib/site-packages/face_recognition_models', 'face_recognition_models'),
-    ],
+    ] + collected_face_models,
     hiddenimports=[
         'flask',
         'jinja2',
