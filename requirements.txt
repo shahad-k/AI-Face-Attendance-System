@@ -3,7 +3,7 @@ opencv-python==4.10.0.84
 numpy
 face_recognition
 cmake
-dlib
+./wheels/dlib-20.0.1-cp312-cp312-win_amd64.whl
 bcrypt
 pyinstaller
 setuptools<81
