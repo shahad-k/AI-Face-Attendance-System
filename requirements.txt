@@ -3,7 +3,10 @@ opencv-python==4.10.0.84
 numpy
 face_recognition
 cmake
-./wheels/dlib-20.0.1-cp312-cp312-win_amd64.whl
+./wheels/dlib-20.0.1-cp312-cp312-win_amd64.whl ; python_version == "3.12" and sys_platform == "win32"
+./wheels/dlib-19.24.1-cp311-cp311-win_amd64.whl ; python_version == "3.11" and sys_platform == "win32"
+./wheels/dlib-19.22.99-cp310-cp310-win_amd64.whl ; python_version == "3.10" and sys_platform == "win32"
+dlib ; python_version not in "3.10 3.11 3.12" or sys_platform != "win32"
 bcrypt
 pyinstaller
 setuptools<81

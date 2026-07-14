@@ -38,8 +38,8 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 🚀 How to Open and Run via Command Prompt (CMD)
 *Runs the project directly from the source code using Python.*
 
-> **⚠️ CRITICAL: Python 3.12 is Required**
-> You must install **Python 3.12.x** (not 3.9, 3.10, or 3.13) because the pre-compiled `dlib` AI wheel bundled in this project is specifically built for Python 3.12 to prevent compilation errors. Ensure Python 3.12 is installed and added to your System PATH.
+> **⚠️ CRITICAL: Python 3.10 to 3.12 is Required**
+> You must install **Python 3.10.x, 3.11.x, or 3.12.x** (not 3.9 or 3.13) because the project contains pre-compiled `dlib` AI wheels for these specific versions to prevent compilation errors. Python 3.9 is not supported due to modern dependency incompatibilities. Ensure your Python version is added to your System PATH.
 
 
 1. Open **Command Prompt (CMD)** and navigate to the project folder (for downloaded ZIPs, the folder name ends in `-main`):
@@ -75,8 +75,8 @@ AI Attendance Pro replaces outdated, manual attendance logging with an automated
 ### 📦 How to Build/Compile as a Standalone App (.exe)
 *Converts the project into a double-clickable desktop application.*
 
-> **⚠️ CRITICAL: Python 3.12 is Required**
-> You must compile this project using **Python 3.12.x**. The `dlib` wheel bundled in the repository is specifically compiled for Python 3.12 to prevent you from needing C++ Build Tools.
+> **⚠️ CRITICAL: Python 3.10 to 3.12 is Required**
+> You must compile this project using **Python 3.10.x, 3.11.x, or 3.12.x**. The repository contains pre-compiled `dlib` wheels for these specific versions to prevent you from needing C++ Build Tools.
 
 
 1. Open **Command Prompt (CMD)** inside the project folder.
