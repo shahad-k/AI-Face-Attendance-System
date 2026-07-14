@@ -16,6 +16,15 @@ DefaultDirName=C:\AI Attendance Pro
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 
+; Version metadata for trust
+VersionInfoVersion={#AppVersion}.0.0
+VersionInfoCompany={#AppPublisher}
+VersionInfoDescription=AI Attendance Pro Setup Installer
+VersionInfoCopyright=Copyright (c) 2026 {#AppPublisher}
+VersionInfoProductName={#AppName}
+VersionInfoProductVersion={#AppVersion}.0.0
+
+
 [Dirs]
 Name: "{app}"; Permissions: users-full
 
