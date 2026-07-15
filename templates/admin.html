@@ -216,6 +216,26 @@
                     </div>
                 </div>
 
+                <!-- Attendance Slot Settings Section -->
+                <div class="section-card" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h2>⏰ Attendance Session Rules</h2>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div class="form-group" style="max-width: 400px; margin-bottom: 0;">
+                            <label for="settings-attendance-mode" style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Choose Attendance Slot Interval</label>
+                            <select id="settings-attendance-mode" class="input-field" onchange="saveAttendanceMode()" style="background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; width: 100%; font-size: 14px; font-family: inherit;">
+                                <option value="daily">Once per Day (Daily Session)</option>
+                                <option value="ampm">Twice per Day (Forenoon / Afternoon Sessions)</option>
+                                <option value="hourly">Once per Hour (Hourly Class Rotation)</option>
+                            </select>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px; line-height: 1.4;">
+                            Configures how often a student can scan their face. AM/PM split automatically checks before or after 12:00 PM.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Class Management Section -->
                 <div class="section-card">
                     <div class="section-header">
@@ -343,6 +363,7 @@
 
             if (page === 'settings') {
                 loadClasses();
+                loadAttendanceMode();
             }
         }
 
@@ -666,6 +687,35 @@
                     togglePasswordFields();
                 }
             } catch(e) { console.error(e); }
+        }
+
+        async function loadAttendanceMode() {
+            try {
+                const res = await fetch('/api/settings/mode');
+                const data = await res.json();
+                if (data.mode) {
+                    document.getElementById('settings-attendance-mode').value = data.mode;
+                }
+            } catch (err) {
+                console.error('Failed to load attendance mode:', err);
+            }
+        }
+
+        async function saveAttendanceMode() {
+            const mode = document.getElementById('settings-attendance-mode').value;
+            try {
+                const res = await fetch('/api/settings/mode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mode: mode })
+                });
+                const data = await res.json();
+                if (data.status !== 'ok') {
+                    alert(data.message);
+                }
+            } catch (err) {
+                console.error('Failed to save attendance mode:', err);
+            }
         }
 
         // --- Manual Student Add Modal ---

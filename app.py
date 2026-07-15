@@ -167,12 +167,16 @@ def init_db():
     if cursor.fetchone()["cnt"] == 0:
         hashed_default_pwd = hash_password("admin")
         cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("admin_password", hashed_default_pwd))
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("attendance_mode", "daily"))
     else:
         # Migrate existing password from 'admin123' to 'admin' if found
         cursor.execute("SELECT value FROM settings WHERE key = 'admin_password'")
         row = cursor.fetchone()
         if row and check_password("admin123", row["value"]):
             cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_password'", (hash_password("admin"),))
+        
+        # Ensure attendance_mode setting row exists
+        cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", ("attendance_mode", "daily"))
         
     # Force delete ghost student record if exists (Clean up database on startup)
     cursor.execute("DELETE FROM attendance WHERE student_id = '__check__'")
@@ -181,6 +185,8 @@ def init_db():
     
     conn.commit()
     conn.close()
+
+init_db()
 
 
 # ============================================================
@@ -590,6 +596,28 @@ def api_change_password():
     return jsonify({"status": "ok", "message": "Admin password updated successfully"})
 
 
+@app.route("/api/settings/mode", methods=["GET", "POST"])
+@admin_required
+def api_settings_mode():
+    conn = get_db()
+    cursor = conn.cursor()
+    if request.method == "GET":
+        cursor.execute("SELECT value FROM settings WHERE key = 'attendance_mode'")
+        row = cursor.fetchone()
+        conn.close()
+        return jsonify({"mode": row["value"] if row else "daily"})
+    elif request.method == "POST":
+        data = request.json
+        mode = data.get("mode", "daily")
+        if mode not in ["daily", "hourly", "ampm"]:
+            conn.close()
+            return jsonify({"status": "error", "message": "Invalid mode."})
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('attendance_mode', ?)", (mode,))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "ok", "message": f"Attendance mode updated to {mode}."})
+
+
 def regenerate_encodings_bg():
     """Background task to regenerate encodings after deletion."""
     try:
@@ -716,15 +744,49 @@ def api_recognize():
                 date_str = now.strftime("%d-%m-%Y")
                 time_str = now.strftime("%H:%M:%S")
                 
-                cursor.execute("SELECT time FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
-                existing_attendance = cursor.fetchone()
-                if existing_attendance:
-                    print(f"[DEBUG] Duplicate Blocked: Attendance already marked for {name} today at {existing_attendance['time']}.")
+                # Fetch attendance mode
+                cursor.execute("SELECT value FROM settings WHERE key = 'attendance_mode'")
+                row_mode = cursor.fetchone()
+                attendance_mode = row_mode["value"] if row_mode else "daily"
+                
+                already_marked = False
+                existing_time = ""
+                
+                if attendance_mode == "hourly":
+                    # Check if marked in the current hour
+                    current_hour = now.strftime("%H")
+                    cursor.execute("SELECT time FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        if r["time"].split(":")[0] == current_hour:
+                            already_marked = True
+                            existing_time = r["time"]
+                            break
+                elif attendance_mode == "ampm":
+                    # Check if marked in the current AM/PM slot (before 12 PM or after 12 PM)
+                    is_am = now.hour < 12
+                    cursor.execute("SELECT time FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        rec_hour = int(r["time"].split(":")[0])
+                        if (is_am and rec_hour < 12) or (not is_am and rec_hour >= 12):
+                            already_marked = True
+                            existing_time = r["time"]
+                            break
+                else:  # daily
+                    cursor.execute("SELECT time FROM attendance WHERE student_id = ? AND date = ?", (student_id, date_str))
+                    existing_attendance = cursor.fetchone()
+                    if existing_attendance:
+                        already_marked = True
+                        existing_time = existing_attendance["time"]
+
+                if already_marked:
+                    print(f"[DEBUG] Duplicate Blocked ({attendance_mode} mode): Attendance already marked for {name} today at {existing_time}.")
                     conn.close()
                     if gender == "FEMALE":
-                        msg = "My lady... you already marked your presence."
+                        msg = f"My lady... you already marked your presence (at {existing_time})."
                     else:
-                        msg = "Bro, you already locked in your attendance. Go conquer the day!"
+                        msg = f"Bro, you already locked in your attendance (at {existing_time}). Go conquer the day!"
                     return jsonify({
                         "status": "already_marked", "name": name, "class": student_class,
                         "roll_no": roll_no, "gender": gender, "message": msg
